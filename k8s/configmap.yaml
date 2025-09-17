@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: altar-trader-hub-config
+  namespace: altar-trader-hub
+data:
+  DATABASE_URL: "postgresql://trading_user:trading_password@postgres-service:5432/trading_bot"
+  REDIS_URL: "redis://redis-service:6379/0"
+  CELERY_BROKER_URL: "redis://redis-service:6379/1"
+  CELERY_RESULT_BACKEND: "redis://redis-service:6379/1"
+  DEBUG: "false"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  HOST: "0.0.0.0"
+  PORT: "8000"

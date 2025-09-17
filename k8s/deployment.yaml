@@ -1,0 +1,157 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: altar-trader-hub-api
+  namespace: altar-trader-hub
+  labels:
+    app: altar-trader-hub-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: altar-trader-hub-api
+  template:
+    metadata:
+      labels:
+        app: altar-trader-hub-api
+    spec:
+      containers:
+      - name: api
+        image: altar-trader-hub-be:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: REDIS_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: altar-trader-hub-secrets
+              key: SECRET_KEY
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: altar-trader-hub-celery-worker
+  namespace: altar-trader-hub
+  labels:
+    app: altar-trader-hub-celery-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: altar-trader-hub-celery-worker
+  template:
+    metadata:
+      labels:
+        app: altar-trader-hub-celery-worker
+    spec:
+      containers:
+      - name: celery-worker
+        image: altar-trader-hub-be:latest
+        command: ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: REDIS_URL
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: CELERY_RESULT_BACKEND
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: altar-trader-hub-celery-beat
+  namespace: altar-trader-hub
+  labels:
+    app: altar-trader-hub-celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: altar-trader-hub-celery-beat
+  template:
+    metadata:
+      labels:
+        app: altar-trader-hub-celery-beat
+    spec:
+      containers:
+      - name: celery-beat
+        image: altar-trader-hub-be:latest
+        command: ["celery", "-A", "app.tasks.celery_app", "beat", "--loglevel=info"]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: REDIS_URL
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            configMapKeyRef:
+              name: altar-trader-hub-config
+              key: CELERY_RESULT_BACKEND
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"

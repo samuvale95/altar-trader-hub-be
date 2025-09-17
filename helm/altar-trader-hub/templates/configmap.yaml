@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: altar-config
+  labels:
+    {{- include "altar-trader-hub.labels" . | nindent 4 }}
+data:
+  environment: "production"
+  log-level: "INFO"
+  max-workers: "10"
+  celery-broker: "redis://redis:6379"
+  celery-result-backend: "redis://redis:6379"
