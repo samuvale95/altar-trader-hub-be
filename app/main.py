@@ -11,7 +11,7 @@ import structlog
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.database import init_db
-from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications
+from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor
 
 # Configure logging
 configure_logging()
@@ -146,6 +146,18 @@ app.include_router(
     notifications.router,
     prefix="/api/v1/notifications",
     tags=["notifications"]
+)
+
+app.include_router(
+    trading_strategies.router,
+    prefix="/api/v1/trading-strategies",
+    tags=["trading-strategies"]
+)
+
+app.include_router(
+    trading_monitor.router,
+    prefix="/api/v1/trading-monitor",
+    tags=["trading-monitor"]
 )
 
 # Startup event

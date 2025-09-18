@@ -31,6 +31,7 @@ class User(Base):
     strategies = relationship("Strategy", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    trading_strategies = relationship("TradingStrategy", back_populates="user", cascade="all, delete-orphan")
 
 
 class APIKey(Base):

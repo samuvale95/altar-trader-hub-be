@@ -8,6 +8,10 @@ from .strategy import Strategy, StrategySignal, StrategyPerformance
 from .order import Order, Trade, OrderSide, OrderType, OrderStatus
 from .market_data import MarketData, News, Indicator
 from .notification import Notification, NotificationTemplate, NotificationType, NotificationStatus, NotificationPriority
+from .trading_strategy import (
+    TradingStrategy, BacktestResult, StrategyTrade, BacktestTrade, StrategyExecution,
+    StrategyStatus, StrategyType, BacktestStatus
+)
 
 __all__ = [
     "User",
@@ -32,4 +36,12 @@ __all__ = [
     "NotificationType",
     "NotificationStatus",
     "NotificationPriority",
+    "TradingStrategy",
+    "BacktestResult",
+    "StrategyTrade",
+    "BacktestTrade",
+    "StrategyExecution",
+    "StrategyStatus",
+    "StrategyType",
+    "BacktestStatus",
 ]
