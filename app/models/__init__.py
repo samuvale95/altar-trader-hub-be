@@ -5,9 +5,9 @@ Database models for the trading bot backend.
 from .user import User, APIKey, UserPreferences
 from .portfolio import Portfolio, Position, Balance
 from .strategy import Strategy, StrategySignal, StrategyPerformance
-from .order import Order, Trade
+from .order import Order, Trade, OrderSide, OrderType, OrderStatus
 from .market_data import MarketData, News, Indicator
-from .notification import Notification, NotificationTemplate
+from .notification import Notification, NotificationTemplate, NotificationType, NotificationStatus, NotificationPriority
 
 __all__ = [
     "User",
@@ -21,9 +21,15 @@ __all__ = [
     "StrategyPerformance",
     "Order",
     "Trade",
+    "OrderSide",
+    "OrderType", 
+    "OrderStatus",
     "MarketData",
     "News",
     "Indicator",
     "Notification",
     "NotificationTemplate",
+    "NotificationType",
+    "NotificationStatus",
+    "NotificationPriority",
 ]

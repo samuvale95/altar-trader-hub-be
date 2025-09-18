@@ -78,7 +78,7 @@ class Order(Base):
     time_in_force = Column(String(10), default="GTC")  # GTC, IOC, FOK
     
     # Additional metadata
-    metadata = Column(Text)  # JSON string for additional data
+    order_metadata = Column(Text)  # JSON string for additional data
     
     # Relationships
     user = relationship("User", back_populates="orders")
@@ -117,7 +117,7 @@ class Trade(Base):
     exchange = Column(String(50), nullable=False)
     
     # Additional metadata
-    metadata = Column(Text)  # JSON string for additional data
+    order_metadata = Column(Text)  # JSON string for additional data
     
     # Relationships
     order = relationship("Order", back_populates="trades")

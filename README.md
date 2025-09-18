@@ -1,197 +1,159 @@
 # Altar Trader Hub Backend
 
-Backend completo per il trading bot crypto con architettura modulare scalabile, costruito con FastAPI, PostgreSQL, Redis e Celery.
+Un backend completo per un trading bot crypto costruito con FastAPI, SQLite e Redis.
 
 ## 🚀 Caratteristiche
 
-- **API REST completa** per gestione portfolio, strategie, ordini e market data
-- **WebSocket real-time** per aggiornamenti istantanei
-- **Supporto multi-exchange** (Binance, Kraken, KuCoin)
-- **Engine di strategie** con backtesting e paper trading
-- **Indicatori tecnici** avanzati (RSI, MACD, Bollinger Bands, etc.)
-- **Sistema di notifiche** (Email, Telegram, Push)
-- **Task asincroni** con Celery
-- **Monitoring completo** con Prometheus e Grafana
-- **Docker ready** per deployment facile
+- **API REST** completa con FastAPI
+- **Autenticazione JWT** con refresh token
+- **Database SQLite** per sviluppo locale (PostgreSQL per produzione)
+- **Redis** per cache e sessioni
+- **WebSocket** per aggiornamenti real-time
+- **Celery** per task asincroni
+- **Docker** e **Kubernetes** per deployment
+- **Monitoring** con Prometheus e Grafana
 
-## 🏗️ Architettura
-
-```
-[Frontend React] <--REST/WebSocket--> [API Gateway/Sicurezza]
-                                                    |
-                                        [Backend Core Server]
-                                                    |
-  +-------------------+----------------------+--------------------------+
-  |                   |                      |                          |
-[Data Feeder]    [Strategy Engine]   [Order Manager]           [Notification Service]
- |                   |                      |                          |
-[DB Market Data] [Log/Stats DB]   [Exchange API Adapter]         [Email/Push/Telegram]
-                                   (Binance, Kraken, KuCoin...)
-```
-
-## 🛠️ Stack Tecnologico
-
-- **Framework**: FastAPI + Uvicorn
-- **Database**: PostgreSQL + Redis
-- **Task Queue**: Celery + Redis
-- **ORM**: SQLAlchemy + Alembic
-- **Autenticazione**: JWT + OAuth2
-- **WebSocket**: FastAPI WebSocket
-- **Monitoring**: Prometheus + Grafana
-- **Container**: Docker + Docker Compose
-
-## 📁 Struttura Progetto
-
-```
-trading-backend/
-├── app/
-│   ├── core/                 # Configurazione e utilities core
-│   ├── api/v1/              # Endpoints API
-│   ├── models/              # Database models
-│   ├── schemas/             # Pydantic schemas
-│   ├── services/            # Business logic
-│   ├── tasks/               # Celery tasks
-│   └── utils/               # Utilities
-├── tests/                   # Test suite
-├── docker/                  # Configurazione Docker
-├── migrations/              # Database migrations
-└── requirements.txt         # Dependencies
-```
-
-## 🚀 Quick Start
-
-### Prerequisiti
+## 📋 Prerequisiti
 
 - Python 3.11+
-- Docker & Docker Compose
-- PostgreSQL 15+
-- Redis 7+
+- Redis (per cache e Celery)
+- Docker (opzionale)
 
-### Installazione
+## 🛠️ Installazione
 
-1. **Clona il repository**
+1. **Clona il repository:**
+   ```bash
+   git clone <repository-url>
+   cd altar-trader-hub-be
+   ```
+
+2. **Crea un ambiente virtuale:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Su Windows: venv\Scripts\activate
+   ```
+
+3. **Installa le dipendenze:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configura le variabili d'ambiente:**
+   ```bash
+   cp .env.example .env
+   # Modifica .env con le tue configurazioni
+   ```
+
+5. **Avvia Redis:**
+   ```bash
+   # Su macOS con Homebrew:
+   brew services start redis
+   
+   # Su Ubuntu/Debian:
+   sudo systemctl start redis
+   
+   # Con Docker:
+   docker run -d -p 6379:6379 redis:alpine
+   ```
+
+## 🚀 Avvio dell'applicazione
+
+1. **Avvia l'applicazione:**
+   ```bash
+   python run.py
+   ```
+
+2. **L'applicazione sarà disponibile su:**
+   - API: http://localhost:8000
+   - Health check: http://localhost:8000/health
+   - Documentazione: http://localhost:8000/docs
+
+## 🧪 Test
+
+Esegui i test per verificare che tutto funzioni:
+
 ```bash
-git clone https://github.com/your-org/altar-trader-hub-be.git
-cd altar-trader-hub-be
+python test_api.py
 ```
 
-2. **Configura l'ambiente**
-```bash
-cp env.example .env
-# Modifica .env con le tue configurazioni
-```
+## 📚 API Endpoints
 
-3. **Avvia con Docker Compose**
-```bash
-# Development
-docker-compose -f docker/docker-compose.yml up -d
-
-# Production
-docker-compose -f docker/docker-compose.prod.yml up -d
-```
-
-4. **Esegui le migrazioni**
-```bash
-docker-compose exec api alembic upgrade head
-```
-
-5. **Verifica l'installazione**
-```bash
-curl http://localhost:8000/health
-```
-
-### Installazione Locale
-
-1. **Crea virtual environment**
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# o
-venv\Scripts\activate     # Windows
-```
-
-2. **Installa dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-3. **Configura database**
-```bash
-# Crea database PostgreSQL
-createdb trading_bot
-
-# Esegui migrazioni
-alembic upgrade head
-```
-
-4. **Avvia l'applicazione**
-```bash
-# API Server
-uvicorn app.main:app --reload
-
-# Celery Worker
-celery -A app.tasks.celery_app worker --loglevel=info
-
-# Celery Beat
-celery -A app.tasks.celery_app beat --loglevel=info
-```
-
-## 📚 API Documentation
-
-Una volta avviata l'applicazione, la documentazione API è disponibile su:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Endpoints Principali
-
-#### Autenticazione
+### Autenticazione
 - `POST /api/v1/auth/register` - Registrazione utente
-- `POST /api/v1/auth/login` - Login
+- `POST /api/v1/auth/login` - Login utente
 - `POST /api/v1/auth/refresh` - Refresh token
-- `GET /api/v1/auth/me` - Info utente corrente
+- `GET /api/v1/auth/me` - Profilo utente corrente
 
-#### Portfolio
-- `GET /api/v1/portfolio/overview` - Overview portfolio
-- `GET /api/v1/portfolio/portfolios` - Lista portfolio
-- `POST /api/v1/portfolio/portfolios` - Crea portfolio
-- `GET /api/v1/portfolio/positions` - Posizioni attive
-- `GET /api/v1/portfolio/balances` - Balance per exchange
+### Portfolio
+- `GET /api/v1/portfolio/` - Lista portfolio
+- `POST /api/v1/portfolio/` - Crea portfolio
+- `GET /api/v1/portfolio/{id}` - Dettagli portfolio
+- `PUT /api/v1/portfolio/{id}` - Aggiorna portfolio
+- `DELETE /api/v1/portfolio/{id}` - Elimina portfolio
 
-#### Strategie
+### Strategie
 - `GET /api/v1/strategies/` - Lista strategie
 - `POST /api/v1/strategies/` - Crea strategia
+- `GET /api/v1/strategies/{id}` - Dettagli strategia
+- `PUT /api/v1/strategies/{id}` - Aggiorna strategia
+- `DELETE /api/v1/strategies/{id}` - Elimina strategia
 - `POST /api/v1/strategies/{id}/start` - Avvia strategia
 - `POST /api/v1/strategies/{id}/stop` - Ferma strategia
-- `GET /api/v1/strategies/{id}/performance` - Performance metrics
 
-#### Ordini
+### Ordini
 - `GET /api/v1/orders/` - Lista ordini
 - `POST /api/v1/orders/` - Crea ordine
+- `GET /api/v1/orders/{id}` - Dettagli ordine
+- `PUT /api/v1/orders/{id}` - Aggiorna ordine
 - `DELETE /api/v1/orders/{id}` - Cancella ordine
-- `GET /api/v1/orders/trades/` - Storia trades
 
-#### Market Data
+### Market Data
 - `GET /api/v1/market-data/symbols` - Lista simboli
-- `GET /api/v1/market-data/ohlcv` - OHLCV data
-- `GET /api/v1/market-data/ticker` - Ticker real-time
+- `GET /api/v1/market-data/ohlcv` - Dati OHLCV
+- `GET /api/v1/market-data/ticker` - Ticker
 - `GET /api/v1/market-data/indicators` - Indicatori tecnici
 
-#### WebSocket
-- `WS /ws/portfolio` - Portfolio updates
-- `WS /ws/orders` - Order updates
-- `WS /ws/market-data` - Market data stream
-- `WS /ws/notifications` - Notifications
+### Notifiche
+- `GET /api/v1/notifications/` - Lista notifiche
+- `POST /api/v1/notifications/` - Crea notifica
+- `PUT /api/v1/notifications/{id}` - Aggiorna notifica
+
+### WebSocket
+- `WS /ws` - Connessione WebSocket per aggiornamenti real-time
+
+## 🐳 Docker
+
+### Sviluppo
+```bash
+docker-compose -f docker/docker-compose.yml up
+```
+
+### Produzione
+```bash
+docker-compose -f docker/docker-compose.prod.yml up
+```
+
+## ☸️ Kubernetes
+
+### Deploy con Helm
+```bash
+helm install altar-trader-hub ./helm/altar-trader-hub
+```
+
+### Deploy con kubectl
+```bash
+kubectl apply -f k8s/
+```
 
 ## 🔧 Configurazione
 
-### Variabili d'Ambiente
+### Variabili d'ambiente principali
 
-Copia `env.example` in `.env` e configura:
-
-```env
+```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/trading_bot
+DATABASE_URL=sqlite:///./trading_bot.db
+
+# Redis
 REDIS_URL=redis://localhost:6379/0
 
 # Security
@@ -199,126 +161,65 @@ SECRET_KEY=your-super-secret-key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# Exchange APIs
-BINANCE_API_KEY=your-binance-key
-BINANCE_SECRET_KEY=your-binance-secret
-KRAKEN_API_KEY=your-kraken-key
-KRAKEN_SECRET_KEY=your-kraken-secret
-
-# Notifications
-SMTP_HOST=smtp.gmail.com
-SMTP_USERNAME=your-email
-SMTP_PASSWORD=your-password
-TELEGRAM_BOT_TOKEN=your-telegram-token
-```
-
-### Exchange Configuration
-
-Il sistema supporta multiple exchange:
-
-- **Binance**: API Key + Secret Key
-- **Kraken**: API Key + Secret Key
-- **KuCoin**: API Key + Secret Key + Passphrase
-
-Configura le tue API keys nel database tramite l'endpoint `/api/v1/auth/api-keys`.
-
-## 🧪 Testing
-
-```bash
-# Esegui tutti i test
-pytest
-
-# Test con coverage
-pytest --cov=app --cov-report=html
-
-# Test specifici
-pytest tests/test_api/test_auth.py
+# API Keys (opzionale)
+BINANCE_API_KEY=your-binance-api-key
+BINANCE_SECRET_KEY=your-binance-secret-key
 ```
 
 ## 📊 Monitoring
 
-### Prometheus
-- **URL**: http://localhost:9090
-- **Metrics**: Performance, errori, latenza
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000
 
-### Grafana
-- **URL**: http://localhost:3000
-- **Login**: admin/admin
-- **Dashboards**: Trading metrics, system health
-
-### Flower (Celery)
-- **URL**: http://localhost:5555
-- **Monitor**: Task queue, worker status
-
-## 🚀 Deployment
-
-### Docker Production
+## 🧪 Testing
 
 ```bash
-# Build e deploy
-docker-compose -f docker/docker-compose.prod.yml up -d
+# Test unitari
+pytest
 
-# Scale workers
-docker-compose -f docker/docker-compose.prod.yml up -d --scale celery-worker=3
+# Test con coverage
+pytest --cov=app
+
+# Linting
+flake8 app/
+black app/
+isort app/
 ```
 
-### Kubernetes
+## 📝 Sviluppo
 
-```bash
-# Applica configurazioni
-kubectl apply -f k8s/
+### Struttura del progetto
 
-# Verifica deployment
-kubectl get pods
-kubectl get services
+```
+app/
+├── api/           # Endpoint API
+├── core/          # Configurazione core
+├── models/        # Modelli database
+├── schemas/       # Schemi Pydantic
+├── services/      # Servizi business
+├── tasks/         # Task Celery
+└── utils/         # Utilità
 ```
 
-## 🔒 Sicurezza
+### Aggiungere un nuovo endpoint
 
-- **JWT Authentication** con refresh tokens
-- **Rate limiting** per prevenire abuse
-- **Input validation** con Pydantic
-- **SQL injection prevention** con SQLAlchemy
-- **CORS configuration** per frontend
-- **Audit logging** completo
-
-## 📈 Performance
-
-- **Response time**: < 200ms per API calls
-- **WebSocket latency**: < 50ms
-- **Concurrent users**: 1000+
-- **Data processing**: Real-time
-- **Uptime target**: 99.9%
+1. Crea il modello in `app/models/`
+2. Crea lo schema in `app/schemas/`
+3. Crea l'endpoint in `app/api/v1/`
+4. Aggiungi il router in `app/main.py`
 
 ## 🤝 Contribuire
 
 1. Fork del repository
-2. Crea feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push branch (`git push origin feature/amazing-feature`)
-5. Apri Pull Request
+2. Crea un branch per la feature (`git checkout -b feature/amazing-feature`)
+3. Commit delle modifiche (`git commit -m 'Add amazing feature'`)
+4. Push al branch (`git push origin feature/amazing-feature`)
+5. Apri una Pull Request
 
-## 📝 Licenza
+## 📄 Licenza
 
-Questo progetto è licenziato sotto la MIT License - vedi il file [LICENSE](LICENSE) per dettagli.
+Questo progetto è sotto licenza MIT. Vedi il file `LICENSE` per i dettagli.
 
 ## 🆘 Supporto
 
-- **Documentation**: [Wiki](https://github.com/your-org/altar-trader-hub-be/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-org/altar-trader-hub-be/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/altar-trader-hub-be/discussions)
-
-## 🗺️ Roadmap
-
-- [ ] Supporto per più exchange
-- [ ] Machine Learning strategies
-- [ ] Advanced risk management
-- [ ] Mobile app API
-- [ ] Social trading features
-- [ ] Advanced backtesting
-- [ ] Paper trading improvements
-- [ ] Real-time alerts system
-
----
-
-**Altar Trader Hub** - Il futuro del trading crypto automatizzato 🚀
+Per supporto o domande, apri una issue su GitHub.

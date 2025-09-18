@@ -12,7 +12,8 @@ from app.core.security import (
     verify_password, 
     get_password_hash, 
     create_tokens,
-    verify_token
+    verify_token,
+    get_current_user
 )
 from app.models.user import User, UserPreferences
 from app.schemas.user import (

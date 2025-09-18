@@ -64,7 +64,7 @@ class Notification(Base):
     
     # Content and context
     data = Column(JSON)  # Additional data for template rendering
-    metadata = Column(JSON)  # Additional metadata
+    notification_metadata = Column(JSON)  # Additional metadata
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

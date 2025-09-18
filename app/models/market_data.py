@@ -68,7 +68,7 @@ class News(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Additional metadata
-    metadata = Column(JSON)  # Additional data from sentiment analysis
+    news_metadata = Column(JSON)  # Additional data from sentiment analysis
     
     # Indexes
     __table_args__ = (
@@ -104,7 +104,7 @@ class Indicator(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Additional metadata
-    metadata = Column(JSON)  # Additional indicator-specific data
+    indicator_metadata = Column(JSON)  # Additional indicator-specific data
     
     # Indexes
     __table_args__ = (

@@ -3,7 +3,8 @@ Configuration settings for the trading bot backend.
 """
 
 from typing import List, Optional
-from pydantic import BaseSettings, validator
+from pydantic_settings import BaseSettings
+from pydantic import validator
 import os
 
 
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     port: int = 8000
     
     # Database
-    database_url: str = "postgresql://user:password@localhost:5432/trading_bot"
+    database_url: str = "sqlite:///./trading_bot.db"
     redis_url: str = "redis://localhost:6379/0"
     
     # Security
@@ -87,8 +88,8 @@ class Settings(BaseSettings):
     
     @validator("database_url")
     def validate_database_url(cls, v):
-        if not v.startswith(("postgresql://", "postgresql+psycopg2://")):
-            raise ValueError("Database URL must be a PostgreSQL connection string")
+        if not v.startswith(("postgresql://", "postgresql+psycopg2://", "sqlite:///")):
+            raise ValueError("Database URL must be a PostgreSQL or SQLite connection string")
         return v
     
     @validator("redis_url")

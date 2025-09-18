@@ -9,13 +9,21 @@ from sqlalchemy.pool import StaticPool
 import redis
 from app.core.config import settings
 
-# PostgreSQL Database
-engine = create_engine(
-    settings.database_url,
-    poolclass=StaticPool,
-    pool_pre_ping=True,
-    echo=settings.debug
-)
+# Database Engine (SQLite for development, PostgreSQL for production)
+if settings.database_url.startswith("sqlite"):
+    engine = create_engine(
+        settings.database_url,
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+        echo=settings.debug
+    )
+else:
+    engine = create_engine(
+        settings.database_url,
+        poolclass=StaticPool,
+        pool_pre_ping=True,
+        echo=settings.debug
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
