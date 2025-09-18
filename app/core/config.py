@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "Altar Trader Hub Backend"
     version: str = "0.1.0"
-    debug: bool = False
+    debug: bool = True
     environment: str = "development"
     host: str = "0.0.0.0"
     port: int = 8000
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     
     # CORS
-    allowed_origins: List[str] = ["http://localhost:3000", "http://localhost:3001"]
+    allowed_origins: List[str] = ["*"]
     
     # Exchange API Keys
     binance_api_key: Optional[str] = None
