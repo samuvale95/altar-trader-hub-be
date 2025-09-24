@@ -19,6 +19,7 @@ from app.schemas.trading_strategy import (
     AvailableStrategiesResponse, StrategyStatisticsResponse
 )
 from app.services.trading_strategy_service import TradingStrategyService
+from app.services.symbol_manager import symbol_manager
 
 router = APIRouter()
 
@@ -124,6 +125,14 @@ async def create_strategy(
     db: Session = Depends(get_db)
 ):
     """Create a new trading strategy."""
+    
+    # Validate symbol before creating strategy
+    if not symbol_manager.validate_symbol(strategy_data.symbol):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Symbol {strategy_data.symbol} is not valid or not tradable on Binance"
+        )
+    
     service = TradingStrategyService(db)
     return service.create_strategy(current_user.id, strategy_data)
 

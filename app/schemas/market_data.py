@@ -196,3 +196,149 @@ class MarketDataStats(BaseModel):
     last_update: datetime
     exchanges: List[str]
     timeframes: List[str]
+
+
+# Chart-specific schemas
+class ChartDataPoint(BaseModel):
+    """Chart data point for candlestick charts."""
+    timestamp: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+class ChartData(BaseModel):
+    """Chart data response."""
+    symbol: str
+    timeframe: str
+    data: List[ChartDataPoint]
+    count: int
+    start_time: str
+    end_time: str
+
+
+class PriceHistoryPoint(BaseModel):
+    """Price history data point."""
+    timestamp: str
+    price: float
+    volume: float
+    open: float
+    high: float
+    low: float
+    close: float
+
+
+class PriceHistory(BaseModel):
+    """Price history response."""
+    symbol: str
+    timeframe: str
+    prices: List[PriceHistoryPoint]
+    count: int
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+
+
+class VolumeDataPoint(BaseModel):
+    """Volume data point."""
+    timestamp: str
+    volume: float
+    quote_volume: float
+    trades_count: int
+
+
+class VolumeData(BaseModel):
+    """Volume data response."""
+    symbol: str
+    timeframe: str
+    data: List[VolumeDataPoint]
+    count: int
+
+
+class TechnicalIndicatorPoint(BaseModel):
+    """Technical indicator data point."""
+    timestamp: str
+    value: Optional[float] = None
+    values: Optional[Dict[str, Any]] = None
+    signal: Optional[str] = None
+    signal_strength: Optional[float] = None
+
+
+class TechnicalIndicatorData(BaseModel):
+    """Technical indicator data response."""
+    symbol: str
+    timeframe: str
+    indicator_name: str
+    data: List[TechnicalIndicatorPoint]
+    count: int
+    overbought_level: Optional[float] = None
+    oversold_level: Optional[float] = None
+
+
+class ChartRequest(BaseModel):
+    """Chart data request."""
+    symbol: str
+    timeframe: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    limit: int = 1000
+    indicators: Optional[List[str]] = None
+    
+    @validator('timeframe')
+    def validate_timeframe(cls, v):
+        allowed_timeframes = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w']
+        if v not in allowed_timeframes:
+            raise ValueError(f'Timeframe must be one of: {allowed_timeframes}')
+        return v
+    
+    @validator('limit')
+    def validate_limit(cls, v):
+        if v > 2000:
+            raise ValueError('Limit cannot exceed 2000')
+        return v
+
+
+class SymbolInfo(BaseModel):
+    """Symbol information."""
+    symbol: str
+    data_points: int
+    latest_price: Optional[float] = None
+    latest_timestamp: Optional[str] = None
+    price_change_24h: Optional[float] = None
+    price_change_percentage_24h: Optional[float] = None
+
+
+class AvailableSymbolsResponse(BaseModel):
+    """Available symbols response."""
+    symbols: List[SymbolInfo]
+    total_symbols: int
+
+
+class TimeframeInfo(BaseModel):
+    """Timeframe information."""
+    timeframe: str
+    data_points: int
+    latest_timestamp: Optional[str] = None
+
+
+class AvailableTimeframesResponse(BaseModel):
+    """Available timeframes response."""
+    symbol: str
+    timeframes: List[TimeframeInfo]
+    total_timeframes: int
+
+
+class ChartSummary(BaseModel):
+    """Chart summary data."""
+    symbol: str
+    timeframe: str
+    current_price: float
+    price_change: float
+    price_change_percentage: float
+    volume_24h: float
+    high_24h: float
+    low_24h: float
+    open_24h: float
+    close_24h: float
+    last_updated: str

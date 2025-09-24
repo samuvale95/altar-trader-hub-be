@@ -1,0 +1,100 @@
+"""
+Data collection scheduler service.
+"""
+
+import asyncio
+from datetime import datetime, timedelta
+from app.core.logging import get_logger
+from app.services.data_feeder import data_feeder
+from app.services.symbol_manager import symbol_manager
+
+logger = get_logger(__name__)
+
+
+class DataScheduler:
+    """Service for scheduling data collection tasks."""
+    
+    def __init__(self):
+        self.is_running = False
+        self.scheduler_task = None
+        self.collection_interval = 300  # 5 minutes
+        self.symbol_refresh_interval = 3600  # 1 hour
+    
+    async def start_scheduler(self):
+        """Start the data collection scheduler."""
+        
+        if self.is_running:
+            logger.warning("Data scheduler is already running")
+            return
+        
+        logger.info("Starting data collection scheduler")
+        
+        self.is_running = True
+        self.scheduler_task = asyncio.create_task(self._run_scheduler())
+        
+        logger.info("Data collection scheduler started")
+    
+    async def stop_scheduler(self):
+        """Stop the data collection scheduler."""
+        
+        if not self.is_running:
+            logger.warning("Data scheduler is not running")
+            return
+        
+        logger.info("Stopping data collection scheduler")
+        
+        self.is_running = False
+        
+        if self.scheduler_task:
+            self.scheduler_task.cancel()
+            try:
+                await self.scheduler_task
+            except asyncio.CancelledError:
+                pass
+        
+        logger.info("Data collection scheduler stopped")
+    
+    async def _run_scheduler(self):
+        """Run the scheduler loop."""
+        
+        last_symbol_refresh = datetime.utcnow()
+        
+        while self.is_running:
+            try:
+                current_time = datetime.utcnow()
+                
+                # Check if we need to refresh symbols
+                if (current_time - last_symbol_refresh).total_seconds() >= self.symbol_refresh_interval:
+                    logger.info("Refreshing symbols cache")
+                    symbol_manager.refresh_symbols_cache()
+                    last_symbol_refresh = current_time
+                
+                # Check if data collection is running
+                if not self.is_running:
+                    logger.info("Starting data collection")
+                    await data_feeder.collect_market_data()
+                
+                # Wait before next check
+                await asyncio.sleep(self.collection_interval)
+                
+            except asyncio.CancelledError:
+                logger.info("Data scheduler cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in data scheduler: {e}")
+                await asyncio.sleep(60)  # Wait 1 minute before retry
+    
+    def get_scheduler_status(self):
+        """Get scheduler status."""
+        
+        return {
+            "is_running": self.is_running,
+            "collection_interval": self.collection_interval,
+            "symbol_refresh_interval": self.symbol_refresh_interval,
+            "data_collection_running": True
+        }
+
+
+# Global scheduler instance
+data_scheduler = DataScheduler()
+

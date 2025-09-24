@@ -12,6 +12,7 @@ from app.models.market_data import MarketData, Indicator
 from app.models.portfolio import Balance, Position
 from app.models.user import User
 from app.services.exchange_adapters import get_exchange_adapter
+from app.services.symbol_manager import symbol_manager
 from app.api.v1.websocket import send_market_data_update, send_portfolio_update
 from app.utils.indicators import (
     calculate_rsi, calculate_macd, calculate_bollinger_bands,
@@ -27,12 +28,131 @@ class DataFeeder:
     
     def __init__(self):
         self.exchange_adapters = {}
-        self.symbols = [
+        # Load symbols dynamically from Binance
+        self.symbols = self._load_dynamic_symbols()
+        self.timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
+    
+    def _load_dynamic_symbols(self) -> List[str]:
+        """Load symbols dynamically from Binance or use fallback."""
+        try:
+            # Try to get popular symbols from Binance
+            symbols = symbol_manager.get_popular_symbols("USDT", 50)
+            if symbols:
+                logger.info(f"Loaded {len(symbols)} symbols from Binance")
+                return symbols
+        except Exception as e:
+            logger.warning(f"Failed to load dynamic symbols: {e}")
+        
+        # Fallback to hardcoded list
+        fallback_symbols = [
             "BTCUSDT", "ETHUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT",
             "BNBUSDT", "XRPUSDT", "SOLUSDT", "MATICUSDT", "AVAXUSDT"
         ]
-        self.timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
+        logger.info(f"Using fallback symbols: {len(fallback_symbols)} symbols")
+        return fallback_symbols
     
+    async def _get_exchange_adapter(self, exchange: str):
+        """Get exchange adapter for the specified exchange."""
+        
+        if exchange not in self.exchange_adapters:
+            try:
+                adapter = get_exchange_adapter(exchange)
+                if adapter:
+                    self.exchange_adapters[exchange] = adapter
+                    logger.info(f"Loaded {exchange} adapter")
+                else:
+                    logger.error(f"Failed to load {exchange} adapter")
+                    return None
+            except Exception as e:
+                logger.error(f"Error loading {exchange} adapter: {e}")
+                return None
+        
+        return self.exchange_adapters.get(exchange)
+    
+    async def get_latest_data(self, symbol: str, timeframe: str, limit: int = 1) -> List[Dict[str, Any]]:
+        """Get latest market data for a symbol and timeframe."""
+        
+        try:
+            # Get exchange adapter
+            exchange_adapter = await self._get_exchange_adapter("binance")
+            if not exchange_adapter:
+                logger.error("Binance adapter not available")
+                return []
+            
+            # Get latest klines
+            klines = exchange_adapter.get_klines(symbol, timeframe, limit=limit)
+            
+            if not klines:
+                return []
+            
+            # Convert to our format
+            market_data = []
+            for kline in klines:
+                data = {
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "open_price": float(kline['open']),
+                    "high_price": float(kline['high']),
+                    "low_price": float(kline['low']),
+                    "close_price": float(kline['close']),
+                    "volume": float(kline['volume']),
+                    "quote_volume": float(kline['quote_volume']),
+                    "trades_count": int(kline['trades_count']),
+                    "taker_buy_volume": float(kline['taker_buy_volume']),
+                    "taker_buy_quote_volume": float(kline['taker_buy_quote_volume']),
+                    "timestamp": kline['timestamp']
+                }
+                market_data.append(data)
+            
+            return market_data
+            
+        except Exception as e:
+            logger.error(f"Error getting latest data for {symbol} {timeframe}: {e}")
+            return []
+    
+    async def get_historical_data(self, symbol: str, timeframe: str, start_time: datetime, end_time: datetime) -> List[Dict[str, Any]]:
+        """Get historical market data for a symbol and timeframe."""
+        
+        try:
+            # Get exchange adapter
+            exchange_adapter = await self._get_exchange_adapter("binance")
+            if not exchange_adapter:
+                logger.error("Binance adapter not available")
+                return []
+            
+            # Get historical klines
+            klines = exchange_adapter.get_historical_klines(
+                symbol, timeframe, start_time, end_time
+            )
+            
+            if not klines:
+                return []
+            
+            # Convert to our format
+            market_data = []
+            for kline in klines:
+                data = {
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "open_price": float(kline['open']),
+                    "high_price": float(kline['high']),
+                    "low_price": float(kline['low']),
+                    "close_price": float(kline['close']),
+                    "volume": float(kline['volume']),
+                    "quote_volume": float(kline['quote_volume']),
+                    "trades_count": int(kline['trades_count']),
+                    "taker_buy_volume": float(kline['taker_buy_volume']),
+                    "taker_buy_quote_volume": float(kline['taker_buy_quote_volume']),
+                    "timestamp": kline['timestamp']
+                }
+                market_data.append(data)
+            
+            return market_data
+            
+        except Exception as e:
+            logger.error(f"Error getting historical data for {symbol} {timeframe}: {e}")
+            return []
+
     async def collect_market_data(
         self, 
         symbols: Optional[List[str]] = None, 
@@ -453,6 +573,44 @@ class DataFeeder:
             )
             
             db.add(indicator)
+    
+    async def refresh_symbols(self) -> bool:
+        """Refresh the symbols list from Binance."""
+        
+        try:
+            logger.info("Refreshing symbols from Binance")
+            
+            # Refresh symbols cache
+            if symbol_manager.refresh_symbols_cache():
+                # Reload symbols
+                self.symbols = self._load_dynamic_symbols()
+                logger.info(f"Symbols refreshed: {len(self.symbols)} symbols loaded")
+                return True
+            else:
+                logger.warning("Failed to refresh symbols cache")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to refresh symbols: {e}")
+            return False
+    
+    def get_available_symbols(self, quote_asset: str = "USDT", limit: int = 100) -> List[str]:
+        """Get available symbols for trading."""
+        
+        try:
+            return symbol_manager.get_popular_symbols(quote_asset, limit)
+        except Exception as e:
+            logger.error(f"Failed to get available symbols: {e}")
+            return self.symbols[:limit]
+    
+    def validate_symbol(self, symbol: str) -> bool:
+        """Validate if a symbol is available for trading."""
+        
+        try:
+            return symbol_manager.validate_symbol(symbol)
+        except Exception as e:
+            logger.error(f"Failed to validate symbol {symbol}: {e}")
+            return symbol in self.symbols
     
     async def collect_news(self) -> bool:
         """Collect market news and perform sentiment analysis."""

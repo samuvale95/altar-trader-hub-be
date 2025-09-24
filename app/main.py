@@ -11,7 +11,7 @@ import structlog
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.database import init_db
-from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor
+from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor, symbols, system, strategy_control, data_collector, charts
 
 # Configure logging
 configure_logging()
@@ -160,6 +160,36 @@ app.include_router(
     tags=["trading-monitor"]
 )
 
+app.include_router(
+    symbols.router,
+    prefix="/api/v1/symbols",
+    tags=["symbols"]
+)
+
+app.include_router(
+    system.router,
+    prefix="/api/v1/system",
+    tags=["system"]
+)
+
+app.include_router(
+    strategy_control.router,
+    prefix="/api/v1/strategy-control",
+    tags=["strategy-control"]
+)
+
+app.include_router(
+    data_collector.router,
+    prefix="/api/v1/data-collector",
+    tags=["data-collector"]
+)
+
+app.include_router(
+    charts.router,
+    prefix="/api/v1/charts",
+    tags=["charts"]
+)
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
@@ -169,6 +199,11 @@ async def startup_event():
     # Initialize database
     init_db()
     logger.info("Database initialized")
+    
+    # Start data collection scheduler
+    from app.services.data_scheduler import data_scheduler
+    await data_scheduler.start_scheduler()
+    logger.info("Data collection scheduler started")
     
     # TODO: Initialize Redis connection
     # TODO: Initialize Celery workers
@@ -181,6 +216,11 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down application")
+    
+    # Stop data collection scheduler
+    from app.services.data_scheduler import data_scheduler
+    await data_scheduler.stop_scheduler()
+    logger.info("Data collection scheduler stopped")
     
     # TODO: Close database connections
     # TODO: Stop background tasks
