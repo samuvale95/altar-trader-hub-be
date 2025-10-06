@@ -2,6 +2,12 @@
 Charts API endpoints for market data visualization.
 """
 
+import sys
+import os
+# Add project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, project_root)
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -171,6 +177,41 @@ def get_volume_data(
 # TECHNICAL INDICATORS
 # ============================================================================
 
+@router.get("/indicators/{symbol}/all")
+def get_all_technical_indicators(
+    symbol: str,
+    timeframe: str = Query("1h", description="Timeframe: 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w"),
+    limit: int = Query(1000, description="Number of data points to return (max 2000)"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all technical indicators for a symbol."""
+    
+    try:
+        logger.info(f"Getting technical indicators for {symbol} {timeframe}")
+        chart_service = ChartService(db)
+        
+        result = chart_service.calculate_technical_indicators(
+            symbol=symbol,
+            timeframe=timeframe,
+            limit=limit
+        )
+        
+        logger.info(f"Successfully calculated {len(result)} indicators for {symbol}")
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error calculating technical indicators for {symbol}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to calculate technical indicators: {str(e)}"
+        )
+
 @router.get("/indicators/{symbol}/{indicator_name}", response_model=TechnicalIndicatorData)
 def get_technical_indicator(
     symbol: str,
@@ -214,38 +255,6 @@ def get_technical_indicator(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get technical indicator: {str(e)}"
-        )
-
-
-@router.get("/indicators/{symbol}/all", response_model=Dict[str, TechnicalIndicatorData])
-def get_all_technical_indicators(
-    symbol: str,
-    timeframe: str = Query("1h", description="Timeframe: 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w"),
-    limit: int = Query(1000, description="Number of data points to return (max 2000)"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get all technical indicators for a symbol."""
-    
-    try:
-        chart_service = ChartService(db)
-        
-        return chart_service.calculate_technical_indicators(
-            symbol=symbol,
-            timeframe=timeframe,
-            limit=limit
-        )
-        
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"Error calculating technical indicators for {symbol}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to calculate technical indicators: {str(e)}"
         )
 
 

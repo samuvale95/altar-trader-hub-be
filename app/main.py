@@ -11,7 +11,7 @@ import structlog
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.database import init_db
-from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor, symbols, system, strategy_control, data_collector, charts
+from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor, symbols, system, strategy_control, data_collector, charts, cronjob_manager
 
 # Configure logging
 configure_logging()
@@ -188,6 +188,12 @@ app.include_router(
     charts.router,
     prefix="/api/v1/charts",
     tags=["charts"]
+)
+
+app.include_router(
+    cronjob_manager.router,
+    prefix="/api/v1/cronjob",
+    tags=["cronjob-manager"]
 )
 
 # Startup event

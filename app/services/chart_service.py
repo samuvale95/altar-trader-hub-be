@@ -5,6 +5,7 @@ Chart service for processing market data and generating chart-ready data.
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+import numpy as np
 from app.core.logging import get_logger
 from app.models.market_data import MarketData, Indicator
 from app.schemas.market_data import (
@@ -269,48 +270,59 @@ class ChartService:
             # RSI
             rsi_values = calculate_rsi(df["close"], period=14)
             indicators["RSI"] = self._create_indicator_data(
-                symbol, timeframe, "RSI", rsi_values, 
-                overbought_level=70, oversold_level=30
+                symbol=symbol, timeframe=timeframe, indicator_name="RSI", 
+                values=rsi_values, overbought_level=70, oversold_level=30
             )
             
             # MACD
             macd_values = calculate_macd(df["close"])
             indicators["MACD"] = self._create_indicator_data(
-                symbol, timeframe, "MACD", macd_values["macd"],
-                values=macd_values
+                symbol=symbol, timeframe=timeframe, indicator_name="MACD", 
+                values=macd_values["macd"], values_dict=macd_values
             )
             
             # Bollinger Bands
             bb_values = calculate_bollinger_bands(df["close"])
             indicators["BB"] = self._create_indicator_data(
-                symbol, timeframe, "BB", bb_values["middle"],
-                values=bb_values
+                symbol=symbol, timeframe=timeframe, indicator_name="BB", 
+                values=bb_values["middle"], values_dict=bb_values
             )
             
             # SMA
             sma_20 = calculate_sma(df["close"], period=20)
-            indicators["SMA_20"] = self._create_indicator_data(symbol, timeframe, "SMA_20", sma_20)
+            indicators["SMA_20"] = self._create_indicator_data(
+                symbol=symbol, timeframe=timeframe, indicator_name="SMA_20", values=sma_20
+            )
             
             sma_50 = calculate_sma(df["close"], period=50)
-            indicators["SMA_50"] = self._create_indicator_data(symbol, timeframe, "SMA_50", sma_50)
+            indicators["SMA_50"] = self._create_indicator_data(
+                symbol=symbol, timeframe=timeframe, indicator_name="SMA_50", values=sma_50
+            )
             
             # EMA
             ema_12 = calculate_ema(df["close"], period=12)
-            indicators["EMA_12"] = self._create_indicator_data(symbol, timeframe, "EMA_12", ema_12)
+            indicators["EMA_12"] = self._create_indicator_data(
+                symbol=symbol, timeframe=timeframe, indicator_name="EMA_12", values=ema_12
+            )
             
             ema_26 = calculate_ema(df["close"], period=26)
-            indicators["EMA_26"] = self._create_indicator_data(symbol, timeframe, "EMA_26", ema_26)
+            indicators["EMA_26"] = self._create_indicator_data(
+                symbol=symbol, timeframe=timeframe, indicator_name="EMA_26", values=ema_26
+            )
             
             # Stochastic
             stoch_values = calculate_stochastic(df["high"], df["low"], df["close"])
             indicators["STOCH"] = self._create_indicator_data(
-                symbol, timeframe, "STOCH", stoch_values["k"],
-                values=stoch_values, overbought_level=80, oversold_level=20
+                symbol=symbol, timeframe=timeframe, indicator_name="STOCH", 
+                values=stoch_values["k"], values_dict=stoch_values, 
+                overbought_level=80, oversold_level=20
             )
             
             # ATR
             atr_values = calculate_atr(df["high"], df["low"], df["close"])
-            indicators["ATR"] = self._create_indicator_data(symbol, timeframe, "ATR", atr_values)
+            indicators["ATR"] = self._create_indicator_data(
+                symbol=symbol, timeframe=timeframe, indicator_name="ATR", values=atr_values
+            )
             
             return indicators
             
@@ -503,8 +515,13 @@ class ChartService:
         """Create technical indicator data from pandas Series."""
         
         indicator_data = []
-        for i, (timestamp, value) in enumerate(zip(values.index, values)):
-            if pd.isna(value):
+        
+        # Convert pandas Series to lists to avoid serialization issues
+        timestamps = values.index.tolist() if hasattr(values.index, 'tolist') else list(values.index)
+        values_list = values.tolist() if hasattr(values, 'tolist') else list(values)
+        
+        for i, (timestamp, value) in enumerate(zip(timestamps, values_list)):
+            if pd.isna(value) or not isinstance(value, (int, float)) or not np.isfinite(value):
                 continue
             
             # Determine signal
@@ -517,10 +534,35 @@ class ChartService:
                 else:
                     signal = "hold"
             
+            # Convert timestamp to string properly
+            if hasattr(timestamp, 'isoformat'):
+                timestamp_str = timestamp.isoformat()
+            else:
+                # If timestamp is an index, get the actual timestamp from the dataframe
+                timestamp_str = str(timestamp)
+            
+            # Convert values_dict to regular dict if it contains pandas objects
+            clean_values_dict = None
+            if values_dict:
+                clean_values_dict = {}
+                for k, v in values_dict.items():
+                    if hasattr(v, 'tolist'):
+                        # Convert pandas Series to list
+                        v_list = v.tolist()
+                        # Filter out invalid float values
+                        v_list = [x for x in v_list if isinstance(x, (int, float)) and np.isfinite(x)]
+                        clean_values_dict[k] = v_list
+                    elif isinstance(v, (int, float)) and np.isfinite(v):
+                        clean_values_dict[k] = v
+                    elif isinstance(v, list):
+                        # Filter out invalid float values from list
+                        v_list = [x for x in v if isinstance(x, (int, float)) and np.isfinite(x)]
+                        clean_values_dict[k] = v_list
+            
             indicator_data.append(TechnicalIndicatorPoint(
-                timestamp=timestamp.isoformat(),
+                timestamp=timestamp_str,
                 value=float(value),
-                values=values_dict,
+                values=clean_values_dict,
                 signal=signal,
                 signal_strength=abs(value - 50) / 50 if indicator_name == "RSI" else None
             ))
