@@ -30,11 +30,14 @@ async def test_latest_prices_endpoint():
                     print(f"   Count: {result.get('count')}")
                     print(f"   Requested symbols: {result.get('requested_symbols')}")
                     print(f"   Limit: {result.get('limit')}")
+                    print(f"   Calculated at: {result.get('calculated_at')}")
                     
                     prices = result.get('latest_prices', [])
                     print(f"   Sample prices:")
                     for price in prices[:5]:  # Show first 5
-                        print(f"     - {price.get('symbol')}: ${price.get('price')} ({price.get('timeframe')})")
+                        change_indicator = "🟢" if price.get('change_24h_percent', 0) > 0 else "🔴"
+                        print(f"     {change_indicator} {price.get('symbol')}: ${price.get('price')} "
+                              f"({price.get('change_24h_percent')}% / ${price.get('change_24h')})")
                 else:
                     print(f"❌ Failed to get latest prices: {response.status}")
                     error_text = await response.text()
@@ -58,7 +61,9 @@ async def test_latest_prices_endpoint():
                     prices = result.get('latest_prices', [])
                     print(f"   Prices:")
                     for price in prices:
-                        print(f"     - {price.get('symbol')}: ${price.get('price')} at {price.get('timestamp')}")
+                        change_indicator = "🟢" if price.get('change_24h_percent', 0) > 0 else "🔴"
+                        print(f"     {change_indicator} {price.get('symbol')}: ${price.get('price')} "
+                              f"(24h: {price.get('change_24h_percent')}% / ${price.get('change_24h')})")
                 else:
                     print(f"❌ Failed to get specific symbols prices: {response.status}")
         except Exception as e:

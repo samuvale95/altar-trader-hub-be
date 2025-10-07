@@ -160,48 +160,75 @@ async def get_latest_prices(
     limit: int = 10,
     current_user: User = Depends(get_current_user)
 ):
-    """Get latest prices for symbols."""
+    """Get latest prices for symbols with 24h change calculation."""
     
     try:
         db = SessionLocal()
         try:
             from app.models.market_data import MarketData
+            from datetime import datetime, timedelta
             latest_prices = []
+            
+            # Calculate timestamp for 24 hours ago
+            now = datetime.utcnow()
+            time_24h_ago = now - timedelta(hours=24)
             
             if symbols:
                 # Get specific symbols
                 symbol_list = [s.strip().upper() for s in symbols.split(",")]
-                for symbol in symbol_list:
-                    latest = db.query(MarketData).filter(
-                        MarketData.symbol == symbol
-                    ).order_by(MarketData.timestamp.desc()).first()
-                    if latest:
-                        latest_prices.append({
-                            "symbol": symbol,
-                            "price": float(latest.close_price),
-                            "timestamp": latest.timestamp.isoformat(),
-                            "timeframe": latest.timeframe
-                        })
             else:
-                # Get latest prices for all available symbols (limited)
-                distinct_symbols = db.query(MarketData.symbol).distinct().limit(limit).all()
-                for (symbol,) in distinct_symbols:
+                # Get all available symbols (limited) - use subquery for proper distinct + limit
+                from sqlalchemy import func
+                subq = db.query(
+                    MarketData.symbol,
+                    func.max(MarketData.timestamp).label('max_timestamp')
+                ).group_by(MarketData.symbol).limit(limit).subquery()
+                
+                distinct_symbols = db.query(subq.c.symbol).all()
+                symbol_list = [symbol for (symbol,) in distinct_symbols]
+            
+                for symbol in symbol_list:
+                # Get latest price
                     latest = db.query(MarketData).filter(
-                        MarketData.symbol == symbol
+                    MarketData.symbol == symbol
+                ).order_by(MarketData.timestamp.desc()).first()
+                
+                if latest:
+                    # Get price from 24h ago (closest available)
+                    price_24h_ago = db.query(MarketData).filter(
+                        MarketData.symbol == symbol,
+                        MarketData.timestamp <= time_24h_ago
                     ).order_by(MarketData.timestamp.desc()).first()
-                    if latest:
+                    
+                    # Calculate 24h change
+                    current_price = float(latest.close_price)
+                    change_24h = 0.0
+                    change_24h_percent = 0.0
+                    
+                    if price_24h_ago:
+                        old_price = float(price_24h_ago.close_price)
+                        if old_price > 0:
+                            change_24h = current_price - old_price
+                            change_24h_percent = (change_24h / old_price) * 100
+                    
                         latest_prices.append({
                             "symbol": symbol,
-                            "price": float(latest.close_price),
-                            "timestamp": latest.timestamp.isoformat(),
-                            "timeframe": latest.timeframe
-                        })
+                        "price": current_price,
+                        "change_24h": round(change_24h, 8),
+                        "change_24h_percent": round(change_24h_percent, 2),
+                        "timestamp": latest.timestamp.isoformat(),
+                        "timeframe": latest.timeframe,
+                        "volume": float(latest.volume) if latest.volume else 0,
+                        "high_24h": float(latest.high_price) if latest.high_price else current_price,
+                        "low_24h": float(latest.low_price) if latest.low_price else current_price
+                    })
             
             return {
                 "latest_prices": latest_prices,
                 "count": len(latest_prices),
                 "requested_symbols": symbol_list if symbols else "all",
-                "limit": limit
+                "limit": limit,
+                "calculated_at": now.isoformat()
             }
             
         finally:
