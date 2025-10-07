@@ -187,9 +187,9 @@ async def get_latest_prices(
                 distinct_symbols = db.query(subq.c.symbol).all()
                 symbol_list = [symbol for (symbol,) in distinct_symbols]
             
-                for symbol in symbol_list:
+            for symbol in symbol_list:
                 # Get latest price
-                    latest = db.query(MarketData).filter(
+                latest = db.query(MarketData).filter(
                     MarketData.symbol == symbol
                 ).order_by(MarketData.timestamp.desc()).first()
                 
