@@ -19,6 +19,8 @@ from app.utils.indicators import (
     calculate_sma, calculate_ema, calculate_stochastic
 )
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
+import functools
 
 logger = get_logger(__name__)
 
@@ -31,6 +33,8 @@ class DataFeeder:
         # Load symbols dynamically from Binance
         self.symbols = self._load_dynamic_symbols()
         self.timeframes = ["1m", "5m", "15m", "1h", "4h", "1d"]
+        # Thread pool for non-blocking database operations
+        self._executor = ThreadPoolExecutor(max_workers=5)
     
     def _load_dynamic_symbols(self) -> List[str]:
         """Load symbols dynamically from Binance or use fallback."""
@@ -223,7 +227,32 @@ class DataFeeder:
             for symbol in symbols:
                 for timeframe in timeframes:
                     try:
-                        await self._collect_symbol_data(binance_adapter, symbol, timeframe, db)
+                        # Run database operations in thread pool to avoid blocking
+                        loop = asyncio.get_event_loop()
+                        latest_data = await loop.run_in_executor(
+                            self._executor,
+                            functools.partial(
+                                self._collect_symbol_data_sync,
+                                binance_adapter,
+                                symbol,
+                                timeframe,
+                                db
+                            )
+                        )
+                        
+                        # Send WebSocket update if we have latest data
+                        if latest_data:
+                            try:
+                                await send_market_data_update(symbol, {
+                                    "price": latest_data["close"],
+                                    "volume": latest_data["volume"],
+                                    "change": latest_data.get("change", 0),
+                                    "change_percent": latest_data.get("change_percent", 0),
+                                    "timeframe": timeframe
+                                })
+                            except Exception as ws_error:
+                                logger.warning(f"Failed to send WebSocket update: {ws_error}")
+                        
                         collected_data.append({"symbol": symbol, "timeframe": timeframe})
                         completed_operations += 1
                         
@@ -270,29 +299,39 @@ class DataFeeder:
         finally:
             db.close()
     
-    async def _collect_symbol_data(
+    def _collect_symbol_data_sync(
         self, 
         adapter, 
         symbol: str, 
         timeframe: str, 
         db: Session
     ) -> None:
-        """Collect data for a specific symbol and timeframe."""
+        """Collect data for a specific symbol and timeframe with optimized bulk operations (SYNCHRONOUS)."""
         
         try:
             # Get latest data from exchange
             ohlcv_data = adapter.get_klines(symbol, timeframe, limit=100)
             
+            if not ohlcv_data:
+                return
+            
+            # Extract all timestamps to check in one query (BULK OPTIMIZATION)
+            timestamps = [data["timestamp"] for data in ohlcv_data]
+            
+            # Single query to get all existing records
+            existing_records = db.query(MarketData.timestamp).filter(
+                MarketData.symbol == symbol,
+                MarketData.timeframe == timeframe,
+                MarketData.timestamp.in_(timestamps)
+            ).all()
+            
+            # Create a set of existing timestamps for fast lookup
+            existing_timestamps = {record[0] for record in existing_records}
+            
+            # Prepare new records to insert (only non-existing ones)
+            new_records = []
             for data in ohlcv_data:
-                # Check if data already exists
-                existing = db.query(MarketData).filter(
-                    MarketData.symbol == symbol,
-                    MarketData.timeframe == timeframe,
-                    MarketData.timestamp == data["timestamp"]
-                ).first()
-                
-                if not existing:
-                    # Create new market data record
+                if data["timestamp"] not in existing_timestamps:
                     market_data = MarketData(
                         symbol=symbol,
                         timeframe=timeframe,
@@ -307,23 +346,22 @@ class DataFeeder:
                         taker_buy_quote_volume=data.get("taker_buy_quote_volume", 0),
                         timestamp=data["timestamp"]
                     )
-                    
-                    db.add(market_data)
+                    new_records.append(market_data)
             
-            # Send real-time update
+            # Bulk insert all new records at once
+            if new_records:
+                db.bulk_save_objects(new_records)
+                logger.info(f"Inserted {len(new_records)} new records for {symbol} {timeframe}")
+            
+            # Return latest data for async processing
             if ohlcv_data:
-                latest_data = ohlcv_data[-1]
-                await send_market_data_update(symbol, {
-                    "price": latest_data["close"],
-                    "volume": latest_data["volume"],
-                    "change": latest_data.get("change", 0),
-                    "change_percent": latest_data.get("change_percent", 0),
-                    "timeframe": timeframe
-                })
+                return ohlcv_data[-1]
             
         except Exception as e:
             logger.error("Failed to collect symbol data", symbol=symbol, timeframe=timeframe, error=str(e))
             raise
+        
+        return None
     
     async def sync_balances(self) -> bool:
         """Sync user balances from exchanges."""
