@@ -194,6 +194,82 @@ class DataFeeder:
         finally:
             db.close()
     
+    async def collect_market_data_async(
+        self, 
+        symbols: Optional[List[str]] = None, 
+        timeframes: Optional[List[str]] = None,
+        task_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Collect market data asynchronously with progress tracking."""
+        
+        if symbols is None:
+            symbols = self.symbols
+        
+        if timeframes is None:
+            timeframes = self.timeframes
+        
+        total_operations = len(symbols) * len(timeframes)
+        completed_operations = 0
+        
+        db = SessionLocal()
+        collected_data = []
+        
+        try:
+            logger.info("Starting async market data collection", symbols=symbols, timeframes=timeframes, task_id=task_id)
+            
+            # Get Binance adapter (primary data source)
+            binance_adapter = get_exchange_adapter("binance")
+            
+            for symbol in symbols:
+                for timeframe in timeframes:
+                    try:
+                        await self._collect_symbol_data(binance_adapter, symbol, timeframe, db)
+                        collected_data.append({"symbol": symbol, "timeframe": timeframe})
+                        completed_operations += 1
+                        
+                        # Update progress if task_id is provided
+                        if task_id:
+                            progress = int((completed_operations / total_operations) * 100)
+                            from app.services.task_manager import task_manager
+                            await task_manager.update_task_progress(
+                                task_id, 
+                                progress, 
+                                f"Collected data for {symbol} {timeframe} ({completed_operations}/{total_operations})"
+                            )
+                        
+                        # Small delay to prevent overwhelming the exchange
+                        await asyncio.sleep(0.1)
+                        
+                    except Exception as e:
+                        logger.error("Failed to collect data", symbol=symbol, timeframe=timeframe, error=str(e))
+                        completed_operations += 1
+                        continue
+            
+            db.commit()
+            logger.info("Async market data collection completed", collected_count=len(collected_data))
+            
+            return {
+                "success": True,
+                "collected_data": collected_data,
+                "total_operations": total_operations,
+                "completed_operations": completed_operations,
+                "symbols": symbols,
+                "timeframes": timeframes
+            }
+            
+        except Exception as e:
+            logger.error("Async market data collection failed", error=str(e))
+            db.rollback()
+            return {
+                "success": False,
+                "error": str(e),
+                "collected_data": collected_data,
+                "total_operations": total_operations,
+                "completed_operations": completed_operations
+            }
+        finally:
+            db.close()
+    
     async def _collect_symbol_data(
         self, 
         adapter, 
@@ -593,6 +669,64 @@ class DataFeeder:
         except Exception as e:
             logger.error(f"Failed to refresh symbols: {e}")
             return False
+    
+    async def refresh_symbols_async(self, task_id: Optional[str] = None) -> Dict[str, Any]:
+        """Refresh symbols asynchronously with progress tracking."""
+        
+        try:
+            logger.info("Starting async symbols refresh", task_id=task_id)
+            
+            # Update progress
+            if task_id:
+                from app.services.task_manager import task_manager
+                await task_manager.update_task_progress(task_id, 25, "Refreshing symbols cache...")
+            
+            # Refresh symbols cache
+            cache_refreshed = symbol_manager.refresh_symbols_cache()
+            
+            if not cache_refreshed:
+                if task_id:
+                    await task_manager.update_task_progress(task_id, 50, "Failed to refresh symbols cache")
+                return {
+                    "success": False,
+                    "error": "Failed to refresh symbols cache",
+                    "symbols_count": len(self.symbols)
+                }
+            
+            # Update progress
+            if task_id:
+                await task_manager.update_task_progress(task_id, 75, "Reloading symbols list...")
+            
+            # Reload symbols
+            old_count = len(self.symbols)
+            self.symbols = self._load_dynamic_symbols()
+            new_count = len(self.symbols)
+            
+            # Update progress
+            if task_id:
+                await task_manager.update_task_progress(task_id, 100, f"Symbols refreshed: {new_count} symbols loaded")
+            
+            logger.info(f"Async symbols refresh completed: {new_count} symbols loaded")
+            
+            return {
+                "success": True,
+                "symbols_count": new_count,
+                "old_count": old_count,
+                "symbols": self.symbols[:20],  # Return first 20 symbols for preview
+                "cache_refreshed": cache_refreshed
+            }
+                
+        except Exception as e:
+            logger.error(f"Async symbols refresh failed: {e}")
+            if task_id:
+                from app.services.task_manager import task_manager
+                await task_manager.update_task_progress(task_id, 100, f"Failed to refresh symbols: {str(e)}")
+            
+            return {
+                "success": False,
+                "error": str(e),
+                "symbols_count": len(self.symbols)
+            }
     
     def get_available_symbols(self, quote_asset: str = "USDT", limit: int = 100) -> List[str]:
         """Get available symbols for trading."""

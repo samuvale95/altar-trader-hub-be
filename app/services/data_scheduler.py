@@ -58,6 +58,7 @@ class DataScheduler:
         """Run the scheduler loop."""
         
         last_symbol_refresh = datetime.utcnow()
+        last_data_collection = datetime.utcnow()
         
         while self.is_running:
             try:
@@ -69,13 +70,33 @@ class DataScheduler:
                     symbol_manager.refresh_symbols_cache()
                     last_symbol_refresh = current_time
                 
-                # Check if data collection is running
-                if not self.is_running:
-                    logger.info("Starting data collection")
-                    await data_feeder.collect_market_data()
+                # Check if we need to start data collection
+                if (current_time - last_data_collection).total_seconds() >= self.collection_interval:
+                    logger.info("Starting scheduled data collection")
+                    
+                    # Import task manager here to avoid circular imports
+                    from app.services.task_manager import task_manager
+                    
+                    # Check if there's already a data collection task running
+                    active_tasks = task_manager.get_active_tasks()
+                    data_collection_running = any(
+                        task.task_type == "data_collection" for task in active_tasks.values()
+                    )
+                    
+                    if not data_collection_running:
+                        # Submit new data collection task
+                        task_id = await task_manager.submit_task(
+                            "scheduled_data_collection",
+                            data_feeder.collect_market_data_async
+                        )
+                        logger.info(f"Scheduled data collection task submitted: {task_id}")
+                    else:
+                        logger.info("Data collection already running, skipping scheduled collection")
+                    
+                    last_data_collection = current_time
                 
                 # Wait before next check
-                await asyncio.sleep(self.collection_interval)
+                await asyncio.sleep(60)  # Check every minute
                 
             except asyncio.CancelledError:
                 logger.info("Data scheduler cancelled")
@@ -87,11 +108,21 @@ class DataScheduler:
     def get_scheduler_status(self):
         """Get scheduler status."""
         
+        # Get task manager status
+        from app.services.task_manager import task_manager
+        active_tasks = task_manager.get_active_tasks()
+        data_collection_running = any(
+            task.task_type in ["data_collection", "scheduled_data_collection"] 
+            for task in active_tasks.values()
+        )
+        
         return {
             "is_running": self.is_running,
             "collection_interval": self.collection_interval,
             "symbol_refresh_interval": self.symbol_refresh_interval,
-            "data_collection_running": True
+            "data_collection_running": data_collection_running,
+            "active_tasks_count": len(active_tasks),
+            "scheduler_task_types": list(set(task.task_type for task in active_tasks.values()))
         }
 
 

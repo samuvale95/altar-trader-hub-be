@@ -211,6 +211,10 @@ async def startup_event():
     await data_scheduler.start_scheduler()
     logger.info("Data collection scheduler started")
     
+    # Initialize task manager
+    from app.services.task_manager import task_manager
+    logger.info("Task manager initialized")
+    
     # TODO: Initialize Redis connection
     # TODO: Initialize Celery workers
     # TODO: Start background tasks
@@ -227,6 +231,11 @@ async def shutdown_event():
     from app.services.data_scheduler import data_scheduler
     await data_scheduler.stop_scheduler()
     logger.info("Data collection scheduler stopped")
+    
+    # Shutdown task manager
+    from app.services.task_manager import task_manager
+    await task_manager.shutdown()
+    logger.info("Task manager shutdown completed")
     
     # TODO: Close database connections
     # TODO: Stop background tasks
