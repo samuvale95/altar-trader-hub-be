@@ -15,14 +15,14 @@ if settings.database_url.startswith("sqlite"):
         settings.database_url,
         poolclass=StaticPool,
         connect_args={"check_same_thread": False},
-        echo=settings.debug
+        echo=False  # Disabilita il logging delle query SQL
     )
 else:
     engine = create_engine(
         settings.database_url,
         poolclass=StaticPool,
         pool_pre_ping=True,
-        echo=settings.debug
+        echo=False  # Disabilita il logging delle query SQL
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

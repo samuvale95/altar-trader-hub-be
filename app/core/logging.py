@@ -41,9 +41,8 @@ def configure_logging() -> None:
     # Set specific loggers
     logging.getLogger("uvicorn").setLevel(logging.INFO)
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
-    logging.getLogger("sqlalchemy.engine").setLevel(
-        logging.INFO if settings.debug else logging.WARNING
-    )
+    # Disabilita il logging delle query SQL per mantenere i log leggibili
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> structlog.BoundLogger:

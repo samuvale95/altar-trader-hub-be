@@ -66,16 +66,79 @@ class PaperTradingService(BaseTradingService):
             return {
                 "id": portfolio.id,
                 "name": portfolio.name,
+                "description": portfolio.description,
                 "mode": portfolio.mode.value,
                 "initial_capital": float(portfolio.initial_capital),
                 "cash_balance": float(portfolio.cash_balance),
+                "invested_value": float(portfolio.invested_value),
                 "total_value": float(portfolio.total_value),
-                "created_at": portfolio.created_at.isoformat()
+                "total_pnl": float(portfolio.total_pnl),
+                "total_pnl_percentage": float(portfolio.total_pnl_percentage),
+                "realized_pnl": float(portfolio.realized_pnl),
+                "unrealized_pnl": float(portfolio.unrealized_pnl),
+                "total_trades": portfolio.total_trades,
+                "winning_trades": portfolio.winning_trades,
+                "losing_trades": portfolio.losing_trades,
+                "win_rate": float(portfolio.win_rate),
+                "max_drawdown": float(portfolio.max_drawdown) if portfolio.max_drawdown else 0,
+                "created_at": portfolio.created_at.isoformat(),
+                "updated_at": portfolio.updated_at.isoformat() if portfolio.updated_at else None
             }
             
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to create paper portfolio: {e}")
+            raise
+        finally:
+            db.close()
+    
+    async def get_all_portfolios(
+        self,
+        user_id: int
+    ) -> List[Dict[str, Any]]:
+        """Get all paper portfolios for a user."""
+        
+        db = SessionLocal()
+        
+        try:
+            portfolios = db.query(PaperPortfolio).filter(
+                PaperPortfolio.user_id == user_id,
+                PaperPortfolio.is_active == True
+            ).order_by(PaperPortfolio.created_at.desc()).all()
+            
+            result = []
+            for portfolio in portfolios:
+                # Update portfolio value before returning
+                await self._update_portfolio_value_internal(portfolio, db)
+                
+                result.append({
+                    "id": portfolio.id,
+                    "name": portfolio.name,
+                    "description": portfolio.description,
+                    "mode": portfolio.mode.value,
+                    "initial_capital": float(portfolio.initial_capital),
+                    "cash_balance": float(portfolio.cash_balance),
+                    "invested_value": float(portfolio.invested_value),
+                    "total_value": float(portfolio.total_value),
+                    "total_pnl": float(portfolio.total_pnl),
+                    "total_pnl_percentage": float(portfolio.total_pnl_percentage),
+                    "realized_pnl": float(portfolio.realized_pnl),
+                    "unrealized_pnl": float(portfolio.unrealized_pnl),
+                    "total_trades": portfolio.total_trades,
+                    "winning_trades": portfolio.winning_trades,
+                    "losing_trades": portfolio.losing_trades,
+                    "win_rate": float(portfolio.win_rate),
+                    "max_drawdown": float(portfolio.max_drawdown) if portfolio.max_drawdown else 0,
+                    "created_at": portfolio.created_at.isoformat(),
+                    "updated_at": portfolio.updated_at.isoformat() if portfolio.updated_at else None
+                })
+            
+            db.commit()
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to get portfolios: {e}")
             raise
         finally:
             db.close()

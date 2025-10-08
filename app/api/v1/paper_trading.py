@@ -56,6 +56,25 @@ async def create_paper_portfolio(
         )
 
 
+@router.get("/portfolios", response_model=List[PaperPortfolioResponse])
+async def get_all_portfolios(
+    current_user: User = Depends(get_current_user)
+):
+    """Get all paper portfolios for the current user."""
+    
+    try:
+        portfolios = await paper_trading_service.get_all_portfolios(user_id=current_user.id)
+        
+        return [PaperPortfolioResponse(**portfolio) for portfolio in portfolios]
+        
+    except Exception as e:
+        logger.error(f"Failed to get portfolios: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get portfolios: {str(e)}"
+        )
+
+
 @router.get("/portfolio/{portfolio_id}", response_model=PaperPortfolioResponse)
 async def get_paper_portfolio(
     portfolio_id: int,
