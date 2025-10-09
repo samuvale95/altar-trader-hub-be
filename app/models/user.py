@@ -2,10 +2,17 @@
 User-related database models.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
+import enum
+
+
+class TradingMode(enum.Enum):
+    """Trading mode enumeration."""
+    PAPER = "paper"  # Virtual trading
+    LIVE = "live"    # Real trading with actual money
 
 
 class User(Base):
@@ -20,6 +27,10 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     first_name = Column(String(100))
     last_name = Column(String(100))
+    
+    # Trading mode - controlla se l'utente opera in modalità paper o live
+    trading_mode = Column(SQLEnum(TradingMode), default=TradingMode.PAPER, nullable=False)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     last_login = Column(DateTime(timezone=True))

@@ -15,7 +15,7 @@ from app.core.security import (
     verify_token,
     get_current_user
 )
-from app.models.user import User, UserPreferences
+from app.models.user import User, UserPreferences, TradingMode
 from app.schemas.user import (
     UserCreate, 
     UserResponse, 
@@ -109,6 +109,11 @@ def login(
             detail="Inactive user"
         )
     
+    # Update trading mode if provided
+    if user_credentials.trading_mode:
+        trading_mode_value = user_credentials.trading_mode.value
+        user.trading_mode = TradingMode.PAPER if trading_mode_value == "paper" else TradingMode.LIVE
+    
     # Update last login
     from datetime import datetime
     user.last_login = datetime.utcnow()
@@ -117,9 +122,13 @@ def login(
     # Create tokens
     tokens = create_tokens(str(user.id))
     
-    logger.info("User logged in", user_id=user.id, email=user.email)
+    # Add trading mode to response
+    tokens_dict = tokens.dict()
+    tokens_dict["trading_mode"] = user.trading_mode.value
     
-    return tokens
+    logger.info("User logged in", user_id=user.id, email=user.email, trading_mode=user.trading_mode.value)
+    
+    return Token(**tokens_dict)
 
 
 @router.post("/refresh", response_model=Token)
@@ -142,9 +151,13 @@ def refresh_token(
         # Create new tokens
         tokens = create_tokens(str(user.id))
         
+        # Add trading mode to response
+        tokens_dict = tokens.dict()
+        tokens_dict["trading_mode"] = user.trading_mode.value
+        
         logger.info("Token refreshed", user_id=user.id)
         
-        return tokens
+        return Token(**tokens_dict)
         
     except Exception as e:
         logger.error("Token refresh failed", error=str(e))

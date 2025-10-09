@@ -5,6 +5,13 @@ User-related Pydantic schemas.
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, validator
+from enum import Enum
+
+
+class TradingModeEnum(str, Enum):
+    """Trading mode enumeration for schemas."""
+    PAPER = "paper"
+    LIVE = "live"
 
 
 # Base schemas
@@ -37,6 +44,7 @@ class UserLogin(BaseModel):
     """Schema for user login."""
     email: EmailStr
     password: str
+    trading_mode: Optional[TradingModeEnum] = TradingModeEnum.PAPER
 
 
 class UserResponse(UserBase):
@@ -44,6 +52,7 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     is_verified: bool
+    trading_mode: str
     created_at: datetime
     updated_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
@@ -150,8 +159,10 @@ class Token(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+    trading_mode: str
 
 
 class TokenData(BaseModel):
     """Schema for token data."""
     user_id: Optional[int] = None
+    trading_mode: Optional[str] = "paper"
