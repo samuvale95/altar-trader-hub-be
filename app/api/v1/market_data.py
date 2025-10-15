@@ -243,10 +243,10 @@ def get_market_summary(
 ):
     """Get market summary for a symbol."""
     
-    # Get latest market data
+    # Get latest market data (use 1m timeframe for most recent data)
     latest_data = db.query(MarketData).filter(
         MarketData.symbol == symbol,
-        MarketData.timeframe == '1h'
+        MarketData.timeframe == '1m'  # Use 1-minute data for real-time prices
     ).order_by(MarketData.timestamp.desc()).first()
     
     if not latest_data:
@@ -255,20 +255,54 @@ def get_market_summary(
             detail="No market data found for symbol"
         )
     
-    # Calculate price change (simplified)
-    price_change_24h = 0  # TODO: Calculate actual 24h change
-    price_change_percentage_24h = 0  # TODO: Calculate actual percentage change
+    # Calculate 24h price change
+    from datetime import datetime, timedelta
+    time_24h_ago = datetime.utcnow() - timedelta(hours=24)
+    
+    price_24h_ago_data = db.query(MarketData).filter(
+        MarketData.symbol == symbol,
+        MarketData.timeframe == '1h',  # Use 1h for 24h comparison
+        MarketData.timestamp <= time_24h_ago
+    ).order_by(MarketData.timestamp.desc()).first()
+    
+    price_change_24h = 0
+    price_change_percentage_24h = 0
+    
+    if price_24h_ago_data:
+        old_price = float(price_24h_ago_data.close_price)
+        current_price = float(latest_data.close_price)
+        price_change_24h = current_price - old_price
+        if old_price > 0:
+            price_change_percentage_24h = (price_change_24h / old_price) * 100
+    
+    # Get 24h high/low from hourly data
+    data_24h = db.query(MarketData).filter(
+        MarketData.symbol == symbol,
+        MarketData.timeframe == '1h',
+        MarketData.timestamp >= time_24h_ago
+    ).all()
+    
+    high_24h = latest_data.high_price
+    low_24h = latest_data.low_price
+    open_24h = latest_data.open_price
+    volume_24h = latest_data.volume
+    
+    if data_24h:
+        high_24h = max([float(d.high_price) for d in data_24h])
+        low_24h = min([float(d.low_price) for d in data_24h])
+        open_24h = data_24h[-1].open_price if data_24h else latest_data.open_price
+        volume_24h = sum([float(d.volume) for d in data_24h])
     
     return MarketDataSummary(
         symbol=symbol,
         current_price=latest_data.close_price,
         price_change_24h=price_change_24h,
         price_change_percentage_24h=price_change_percentage_24h,
-        volume_24h=latest_data.volume,
+        volume_24h=volume_24h,
         market_cap=None,  # TODO: Add market cap calculation
-        high_24h=latest_data.high_price,
-        low_24h=latest_data.low_price,
-        open_24h=latest_data.open_price,
+        high_24h=high_24h,
+        low_24h=low_24h,
+        open_24h=open_24h,
         close_24h=latest_data.close_price,
         last_updated=latest_data.timestamp
     )

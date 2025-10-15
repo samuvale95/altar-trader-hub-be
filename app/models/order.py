@@ -51,14 +51,23 @@ class Order(Base):
     
     # Order details
     symbol = Column(String(20), nullable=False)  # BTCUSDT, ETHUSDT, etc.
-    side = Column(Enum(OrderSide), nullable=False)
-    type = Column(Enum(OrderType), nullable=False)
+    side = Column(
+        Enum(OrderSide, values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
+    type = Column(
+        Enum(OrderType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
     quantity = Column(Numeric(20, 8), nullable=False)
     price = Column(Numeric(20, 8))  # For limit orders
     stop_price = Column(Numeric(20, 8))  # For stop orders
     
     # Execution details
-    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
+    status = Column(
+        Enum(OrderStatus, values_callable=lambda x: [e.value for e in x]),
+        default=OrderStatus.PENDING
+    )
     filled_quantity = Column(Numeric(20, 8), default=0)
     remaining_quantity = Column(Numeric(20, 8), default=0)
     average_price = Column(Numeric(20, 8), default=0)
@@ -97,7 +106,10 @@ class Trade(Base):
     
     # Trade details
     symbol = Column(String(20), nullable=False)
-    side = Column(Enum(OrderSide), nullable=False)
+    side = Column(
+        Enum(OrderSide, values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
     quantity = Column(Numeric(20, 8), nullable=False)
     price = Column(Numeric(20, 8), nullable=False)
     

@@ -49,7 +49,10 @@ class TradingStrategy(Base):
     description = Column(Text)
     
     # Strategy configuration
-    strategy_type = Column(Enum(StrategyType), nullable=False)
+    strategy_type = Column(
+        Enum(StrategyType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
     parameters = Column(JSON, nullable=False)  # Strategy-specific parameters
     symbol = Column(String(20), nullable=False)  # Trading symbol (e.g., BTCUSDT)
     timeframe = Column(String(10), nullable=False)  # Timeframe (e.g., 1d, 1h)
@@ -59,7 +62,10 @@ class TradingStrategy(Base):
     commission_rate = Column(Numeric(10, 6), nullable=False, default=0.001)
     
     # Status and control
-    status = Column(Enum(StrategyStatus), default=StrategyStatus.INACTIVE)
+    status = Column(
+        Enum(StrategyStatus, values_callable=lambda x: [e.value for e in x]),
+        default=StrategyStatus.INACTIVE
+    )
     is_active = Column(Boolean, default=False)
     auto_start = Column(Boolean, default=False)
     
@@ -103,7 +109,10 @@ class BacktestResult(Base):
     timeframe = Column(String(10), nullable=False)
     
     # Results
-    status = Column(Enum(BacktestStatus), default=BacktestStatus.PENDING)
+    status = Column(
+        Enum(BacktestStatus, values_callable=lambda x: [e.value for e in x]),
+        default=BacktestStatus.PENDING
+    )
     total_periods = Column(Integer, default=0)
     
     # Performance metrics

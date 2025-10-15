@@ -44,13 +44,22 @@ class Notification(Base):
     template_id = Column(Integer, ForeignKey("notification_templates.id"), nullable=True)
     
     # Notification details
-    type = Column(Enum(NotificationType), nullable=False)
+    type = Column(
+        Enum(NotificationType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
     title = Column(String(200), nullable=False)
     message = Column(Text, nullable=False)
-    priority = Column(Enum(NotificationPriority), default=NotificationPriority.MEDIUM)
+    priority = Column(
+        Enum(NotificationPriority, values_callable=lambda x: [e.value for e in x]),
+        default=NotificationPriority.MEDIUM
+    )
     
     # Status and delivery
-    status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING)
+    status = Column(
+        Enum(NotificationStatus, values_callable=lambda x: [e.value for e in x]),
+        default=NotificationStatus.PENDING
+    )
     sent_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     failure_reason = Column(Text)
@@ -86,7 +95,10 @@ class NotificationTemplate(Base):
     description = Column(Text)
     
     # Template content
-    type = Column(Enum(NotificationType), nullable=False)
+    type = Column(
+        Enum(NotificationType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
     title_template = Column(String(200), nullable=False)
     message_template = Column(Text, nullable=False)
     
@@ -96,7 +108,10 @@ class NotificationTemplate(Base):
     
     # Template settings
     is_active = Column(Boolean, default=True)
-    priority = Column(Enum(NotificationPriority), default=NotificationPriority.MEDIUM)
+    priority = Column(
+        Enum(NotificationPriority, values_callable=lambda x: [e.value for e in x]),
+        default=NotificationPriority.MEDIUM
+    )
     
     # Delivery settings
     delivery_methods = Column(JSON)  # List of supported delivery methods

@@ -1,0 +1,23 @@
+name: Deploy on Raspberry Pi
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout codice
+        uses: actions/checkout@v2
+
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Sincronizza codice nella cartella di deploy
+        run: rsync -av --delete . /home/samuelevalente/altar-trader-hub-be
+
+      - name: Riavvia servizio Python
+        run: sudo systemctl restart altar-trader-hub.service

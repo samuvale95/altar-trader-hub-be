@@ -111,7 +111,7 @@ def login(
     
     # Update trading mode if provided
     if user_credentials.trading_mode:
-        trading_mode_value = user_credentials.trading_mode.value
+        trading_mode_value = user_credentials.trading_mode  # Already a string now
         user.trading_mode = TradingMode.PAPER if trading_mode_value == "paper" else TradingMode.LIVE
     
     # Update last login
@@ -123,12 +123,11 @@ def login(
     tokens = create_tokens(str(user.id))
     
     # Add trading mode to response
-    tokens_dict = tokens.dict()
-    tokens_dict["trading_mode"] = user.trading_mode.value
+    tokens["trading_mode"] = user.trading_mode.value
     
     logger.info("User logged in", user_id=user.id, email=user.email, trading_mode=user.trading_mode.value)
     
-    return Token(**tokens_dict)
+    return Token(**tokens)
 
 
 @router.post("/refresh", response_model=Token)
@@ -152,12 +151,11 @@ def refresh_token(
         tokens = create_tokens(str(user.id))
         
         # Add trading mode to response
-        tokens_dict = tokens.dict()
-        tokens_dict["trading_mode"] = user.trading_mode.value
+        tokens["trading_mode"] = user.trading_mode.value
         
         logger.info("Token refreshed", user_id=user.id)
         
-        return Token(**tokens_dict)
+        return Token(**tokens)
         
     except Exception as e:
         logger.error("Token refresh failed", error=str(e))

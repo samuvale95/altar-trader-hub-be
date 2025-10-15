@@ -26,7 +26,11 @@ class PaperPortfolio(Base):
     description = Column(Text)
     
     # Trading mode
-    mode = Column(SQLEnum(TradingMode), default=TradingMode.PAPER, nullable=False)
+    mode = Column(
+        SQLEnum(TradingMode, values_callable=lambda x: [e.value for e in x]),
+        default=TradingMode.PAPER,
+        nullable=False
+    )
     
     # Initial capital
     initial_capital = Column(Numeric(20, 8), nullable=False, default=10000)  # Default $10,000

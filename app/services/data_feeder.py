@@ -38,22 +38,26 @@ class DataFeeder:
     
     def _load_dynamic_symbols(self) -> List[str]:
         """Load symbols dynamically from Binance or use fallback."""
+        # Essential symbols that should always be included
+        essential_symbols = [
+            "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
+            "DOGEUSDT", "SOLUSDT", "MATICUSDT", "DOTUSDT", "LINKUSDT"
+        ]
+        
         try:
             # Try to get popular symbols from Binance
-            symbols = symbol_manager.get_popular_symbols("USDT", 50)
-            if symbols:
-                logger.info(f"Loaded {len(symbols)} symbols from Binance")
-                return symbols
+            popular_symbols = symbol_manager.get_popular_symbols("USDT", 40)
+            if popular_symbols:
+                # Combine essential symbols with popular ones (remove duplicates)
+                all_symbols = list(dict.fromkeys(essential_symbols + popular_symbols))
+                logger.info(f"Loaded {len(all_symbols)} symbols (essential + popular) from Binance")
+                return all_symbols
         except Exception as e:
             logger.warning(f"Failed to load dynamic symbols: {e}")
         
-        # Fallback to hardcoded list
-        fallback_symbols = [
-            "BTCUSDT", "ETHUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT",
-            "BNBUSDT", "XRPUSDT", "SOLUSDT", "MATICUSDT", "AVAXUSDT"
-        ]
-        logger.info(f"Using fallback symbols: {len(fallback_symbols)} symbols")
-        return fallback_symbols
+        # Fallback to essential symbols only
+        logger.info(f"Using essential symbols: {len(essential_symbols)} symbols")
+        return essential_symbols
     
     async def _get_exchange_adapter(self, exchange: str):
         """Get exchange adapter for the specified exchange."""
@@ -62,8 +66,10 @@ class DataFeeder:
             try:
                 adapter = get_exchange_adapter(exchange)
                 if adapter:
+                    # Disable sandbox for public market data collection
+                    adapter.set_sandbox(False)
                     self.exchange_adapters[exchange] = adapter
-                    logger.info(f"Loaded {exchange} adapter")
+                    logger.info(f"Loaded {exchange} adapter (mainnet mode)")
                 else:
                     logger.error(f"Failed to load {exchange} adapter")
                     return None
@@ -177,6 +183,7 @@ class DataFeeder:
             
             # Get Binance adapter (primary data source)
             binance_adapter = get_exchange_adapter("binance")
+            binance_adapter.set_sandbox(False)  # Use mainnet for public data
             
             for symbol in symbols:
                 for timeframe in timeframes:
@@ -223,6 +230,7 @@ class DataFeeder:
             
             # Get Binance adapter (primary data source)
             binance_adapter = get_exchange_adapter("binance")
+            binance_adapter.set_sandbox(False)  # Use mainnet for public data
             
             for symbol in symbols:
                 for timeframe in timeframes:
@@ -478,6 +486,7 @@ class DataFeeder:
             
             # Get Binance adapter for price updates
             binance_adapter = get_exchange_adapter("binance")
+            binance_adapter.set_sandbox(False)  # Use mainnet for price data
             
             for position in positions:
                 try:

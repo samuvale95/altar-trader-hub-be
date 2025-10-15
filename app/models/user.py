@@ -29,7 +29,11 @@ class User(Base):
     last_name = Column(String(100))
     
     # Trading mode - controlla se l'utente opera in modalità paper o live
-    trading_mode = Column(SQLEnum(TradingMode), default=TradingMode.PAPER, nullable=False)
+    trading_mode = Column(
+        SQLEnum(TradingMode, values_callable=lambda x: [e.value for e in x]),
+        default=TradingMode.PAPER,
+        nullable=False
+    )
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

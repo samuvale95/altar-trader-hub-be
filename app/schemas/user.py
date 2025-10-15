@@ -2,9 +2,9 @@
 User-related Pydantic schemas.
 """
 
-from typing import Optional, List
+from typing import Optional, List, Annotated, Any
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator, field_validator, BeforeValidator
 from enum import Enum
 
 
@@ -12,6 +12,17 @@ class TradingModeEnum(str, Enum):
     """Trading mode enumeration for schemas."""
     PAPER = "paper"
     LIVE = "live"
+
+
+def normalize_trading_mode(value: Any) -> str:
+    """Normalize trading mode to lowercase."""
+    if isinstance(value, str):
+        return value.lower()
+    return value
+
+
+# Type alias for trading mode with automatic normalization
+NormalizedTradingMode = Annotated[TradingModeEnum, BeforeValidator(normalize_trading_mode)]
 
 
 # Base schemas
@@ -44,7 +55,20 @@ class UserLogin(BaseModel):
     """Schema for user login."""
     email: EmailStr
     password: str
-    trading_mode: Optional[TradingModeEnum] = TradingModeEnum.PAPER
+    trading_mode: Optional[str] = "paper"
+    
+    @field_validator('trading_mode', mode='before')
+    @classmethod
+    def normalize_and_validate_trading_mode(cls, v):
+        """Normalize trading mode to lowercase and validate."""
+        if v is None:
+            return "paper"
+        if isinstance(v, str):
+            v = v.lower()
+            if v not in ["paper", "live"]:
+                raise ValueError("trading_mode must be 'paper' or 'live'")
+            return v
+        raise ValueError("trading_mode must be a string")
 
 
 class UserResponse(UserBase):
