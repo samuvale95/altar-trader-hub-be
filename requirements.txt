@@ -1,13 +1,14 @@
 # Core FastAPI dependencies
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+gunicorn==21.2.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
 # Database
 sqlalchemy==2.0.23
 alembic==1.13.1
-# psycopg2-binary==2.9.9  # PostgreSQL driver - not needed for SQLite
+psycopg2-binary==2.9.9  # PostgreSQL driver
 redis==5.0.1
 
 # Authentication & Security
@@ -15,9 +16,10 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
-# Task Queue
-celery==5.3.4
-kombu==5.3.4
+# Task Queue & Scheduling
+celery==5.3.4  # Optional: use when SCHEDULER_BACKEND=celery
+kombu==5.3.4   # Optional: use when SCHEDULER_BACKEND=celery
+APScheduler==3.10.4  # Default scheduler
 
 # HTTP Client
 httpx==0.25.2

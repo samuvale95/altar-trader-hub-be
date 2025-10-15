@@ -151,5 +151,8 @@ backups/
 *.db
 *.sqlite
 *.pid
-altar-trader-hub.pid
 nohup.out
+
+# Heroku
+.heroku/
+heroku.yml

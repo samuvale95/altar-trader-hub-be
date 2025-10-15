@@ -27,6 +27,11 @@ from .notification import (
     NotificationCreate, NotificationResponse,
     NotificationTemplateCreate, NotificationTemplateResponse
 )
+from .data_collection import (
+    DataCollectionConfigCreate, DataCollectionConfigUpdate, DataCollectionConfig,
+    JobExecutionLogCreate, JobExecutionLog,
+    JobExecutionStats, DataCollectionStatus
+)
 
 __all__ = [
     # User schemas
@@ -53,4 +58,9 @@ __all__ = [
     # Notification schemas
     "NotificationCreate", "NotificationResponse",
     "NotificationTemplateCreate", "NotificationTemplateResponse",
+    
+    # Data collection schemas
+    "DataCollectionConfigCreate", "DataCollectionConfigUpdate", "DataCollectionConfig",
+    "JobExecutionLogCreate", "JobExecutionLog",
+    "JobExecutionStats", "DataCollectionStatus",
 ]

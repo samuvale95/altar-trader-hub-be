@@ -4,7 +4,7 @@ Configuration settings for the trading bot backend.
 
 from typing import List, Optional
 from pydantic_settings import BaseSettings
-from pydantic import validator
+from pydantic import validator, field_validator
 import os
 
 
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     
     # Database
     database_url: str = "sqlite:///./trading_bot.db"
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: Optional[str] = None  # Redis is optional now
     
     # Security
     secret_key: str = "your-super-secret-key-change-this-in-production"
@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     prometheus_port: int = 9090
     health_check_interval: int = 30
     
+    # Scheduler Backend
+    scheduler_backend: str = "apscheduler"  # Options: "apscheduler" or "celery"
+    
     @validator("allowed_origins", pre=True)
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
@@ -88,14 +91,20 @@ class Settings(BaseSettings):
     
     @validator("database_url")
     def validate_database_url(cls, v):
+        # Heroku provides postgres:// but SQLAlchemy needs postgresql://
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql://", 1)
+        
         if not v.startswith(("postgresql://", "postgresql+psycopg2://", "sqlite:///")):
             raise ValueError("Database URL must be a PostgreSQL or SQLite connection string")
         return v
     
     @validator("redis_url")
     def validate_redis_url(cls, v):
-        if not v.startswith("redis://"):
-            raise ValueError("Redis URL must start with redis://")
+        if v is None:
+            return None
+        if not v.startswith(("redis://", "rediss://")):
+            raise ValueError("Redis URL must start with redis:// or rediss://")
         return v
     
     class Config:

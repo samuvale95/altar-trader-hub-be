@@ -12,6 +12,7 @@ from .trading_strategy import (
     TradingStrategy, BacktestResult, StrategyTrade, BacktestTrade, StrategyExecution,
     StrategyStatus, StrategyType, BacktestStatus
 )
+from .data_collection import DataCollectionConfig, JobExecutionLog
 
 __all__ = [
     "User",
@@ -44,4 +45,6 @@ __all__ = [
     "StrategyStatus",
     "StrategyType",
     "BacktestStatus",
+    "DataCollectionConfig",
+    "JobExecutionLog",
 ]

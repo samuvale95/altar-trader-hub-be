@@ -11,7 +11,7 @@ import structlog
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.database import init_db
-from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor, symbols, system, strategy_control, data_collector, charts, cronjob_manager, paper_trading, trading
+from app.api.v1 import auth, portfolio, strategies, orders, market_data, websocket, notifications, trading_strategies, trading_monitor, symbols, system, strategy_control, data_collector, charts, cronjob_manager, paper_trading, trading, data_collection_admin
 
 # Configure logging
 configure_logging()
@@ -202,6 +202,12 @@ app.include_router(
     tags=["paper-trading"]
 )
 
+app.include_router(
+    data_collection_admin.router,
+    prefix="/api/v1/admin/data-collection",
+    tags=["data-collection-admin"]
+)
+
 # Unified trading router (opera in base al trading_mode dell'utente)
 app.include_router(
     trading.router,
@@ -213,24 +219,37 @@ app.include_router(
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup."""
-    logger.info("Starting application", version=settings.version)
+    logger.info("Starting application", version=settings.version, scheduler_backend=settings.scheduler_backend)
     
     # Initialize database
     init_db()
     logger.info("Database initialized")
     
-    # Start data collection scheduler
-    from app.services.data_scheduler import data_scheduler
-    await data_scheduler.start_scheduler()
-    logger.info("Data collection scheduler started")
+    # Start background scheduler (APScheduler or Celery)
+    from app.scheduler import start_scheduler
+    try:
+        start_scheduler()
+        logger.info("Background scheduler started", backend=settings.scheduler_backend)
+    except Exception as e:
+        logger.error("Failed to start scheduler", error=str(e))
+        # Don't crash the app if scheduler fails
     
-    # Initialize task manager
-    from app.services.task_manager import task_manager
-    logger.info("Task manager initialized")
+    # Legacy: Start data collection scheduler (if still used)
+    try:
+        from app.services.data_scheduler import data_scheduler
+        await data_scheduler.start_scheduler()
+        logger.info("Legacy data collection scheduler started")
+    except ImportError:
+        logger.info("Legacy data scheduler not found (normal with new scheduler)")
+    except Exception as e:
+        logger.warning("Failed to start legacy data scheduler", error=str(e))
     
-    # TODO: Initialize Redis connection
-    # TODO: Initialize Celery workers
-    # TODO: Start background tasks
+    # Initialize task manager (if exists)
+    try:
+        from app.services.task_manager import task_manager
+        logger.info("Task manager initialized")
+    except ImportError:
+        logger.info("Task manager not found (normal)")
     
     logger.info("Application startup completed")
 
@@ -240,13 +259,27 @@ async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down application")
     
-    # Stop data collection scheduler
-    from app.services.data_scheduler import data_scheduler
-    await data_scheduler.stop_scheduler()
-    logger.info("Data collection scheduler stopped")
+    # Shutdown background scheduler
+    from app.scheduler import shutdown_scheduler
+    try:
+        shutdown_scheduler()
+        logger.info("Background scheduler stopped")
+    except Exception as e:
+        logger.error("Failed to stop scheduler", error=str(e))
     
-    # Shutdown task manager
-    from app.services.task_manager import task_manager
+    # Legacy: Stop data collection scheduler (if still used)
+    try:
+        from app.services.data_scheduler import data_scheduler
+        await data_scheduler.stop_scheduler()
+        logger.info("Legacy data collection scheduler stopped")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning("Failed to stop legacy data scheduler", error=str(e))
+    
+    # Shutdown task manager (if exists)
+    try:
+        from app.services.task_manager import task_manager
     await task_manager.shutdown()
     logger.info("Task manager shutdown completed")
     

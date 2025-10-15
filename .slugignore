@@ -1,0 +1,77 @@
+# Test files
+tests/
+test_*.py
+*_test.py
+conftest.py
+
+# Documentation
+*.md
+!README.md
+docs/
+ERRORS_FIXED.md
+IMPLEMENTATION_SUMMARY.md
+PAPER_TRADING_COMPLETED.md
+SETUP_COMPLETED.md
+TRADING_STRATEGIES_INTEGRATION_COMPLETED.md
+*.MD
+
+# Development files
+.env
+.env.*
+env.example
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data and logs
+data/
+logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+trading_bot.db
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Scripts and tools
+scripts/
+download_*.py
+fetch_*.py
+fill_*.py
+collect_*.py
+update_*.py
+monitor_*.py
+simple_*.py
+start_*.py
+test_all.sh
+
+# Docker and Kubernetes (non necessari su Heroku)
+docker/
+k8s/
+helm/
+Dockerfile
+docker-compose*.yml
+
+# Local development
+venv/
+.venv/
+*.local
+.DS_Store
+
+# Paper trading examples
+paper_trading/example_usage.py
+
+# Frontend (se separato)
+frontend/
+

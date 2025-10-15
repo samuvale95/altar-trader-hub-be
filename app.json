@@ -1,0 +1,61 @@
+{
+  "name": "Altar Trader Hub Backend",
+  "description": "Trading bot backend with multi-exchange support, paper trading, and strategy execution",
+  "repository": "https://github.com/samuvale95/altar-trader-hub-be",
+  "keywords": ["python", "fastapi", "trading", "crypto", "bitcoin"],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": {
+      "description": "PostgreSQL database URL (use external service like Neon or Supabase)",
+      "required": true
+    },
+    "SECRET_KEY": {
+      "description": "Secret key for JWT token generation",
+      "generator": "secret",
+      "required": true
+    },
+    "REDIS_URL": {
+      "description": "Redis URL for caching (use Upstash free tier)",
+      "required": false
+    },
+    "ENVIRONMENT": {
+      "description": "Application environment",
+      "value": "production",
+      "required": false
+    },
+    "DEBUG": {
+      "description": "Debug mode",
+      "value": "false",
+      "required": false
+    },
+    "ALLOWED_ORIGINS": {
+      "description": "CORS allowed origins (comma-separated)",
+      "value": "*",
+      "required": false
+    },
+    "BINANCE_API_KEY": {
+      "description": "Binance API Key",
+      "required": false
+    },
+    "BINANCE_SECRET_KEY": {
+      "description": "Binance Secret Key",
+      "required": false
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level",
+      "value": "INFO",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  }
+}
+

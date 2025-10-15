@@ -1,23 +1,30 @@
 # Altar Trader Hub Backend
 
-Un backend completo per un trading bot crypto costruito con FastAPI, SQLite e Redis.
+Un backend completo per un trading bot crypto costruito con FastAPI e PostgreSQL.
 
 ## 🚀 Caratteristiche
 
 - **API REST** completa con FastAPI
 - **Autenticazione JWT** con refresh token
-- **Database SQLite** per sviluppo locale (PostgreSQL per produzione)
-- **Redis** per cache e sessioni
+- **Database PostgreSQL** (SQLite per sviluppo locale)
+- **Redis** opzionale per cache
 - **WebSocket** per aggiornamenti real-time
-- **Celery** per task asincroni
-- **Docker** e **Kubernetes** per deployment
-- **Monitoring** con Prometheus e Grafana
+- **Heroku Scheduler** per task periodici
+- **Deploy facile su Heroku** con costi minimi ($5/mese)
+- **Multi-exchange support** (Binance, Kraken, KuCoin)
+- **Paper Trading** per test strategie senza rischi
 
 ## 📋 Prerequisiti
 
+### Sviluppo Locale
 - Python 3.11+
-- Redis (per cache e Celery)
-- Docker (opzionale)
+- Redis (opzionale, per cache)
+- PostgreSQL (opzionale, può usare SQLite)
+
+### Produzione (Heroku)
+- Account Heroku (gratuito)
+- Database PostgreSQL esterno (Neon/Supabase - gratuito)
+- Redis esterno opzionale (Upstash - gratuito)
 
 ## 🛠️ Installazione
 
@@ -207,6 +214,59 @@ app/
 2. Crea lo schema in `app/schemas/`
 3. Crea l'endpoint in `app/api/v1/`
 4. Aggiungi il router in `app/main.py`
+
+## 🚀 Deployment
+
+### Deploy su Heroku (Consigliato)
+
+Il modo più semplice ed economico per deployare l'applicazione.
+
+**Costo: $5/mese** (Web Dyno Eco + database esterno gratuito)
+
+1. **Setup Rapido:**
+   ```bash
+   # Crea app Heroku
+   heroku create your-app-name
+   
+   # Configura database PostgreSQL esterno (Neon/Supabase)
+   heroku config:set DATABASE_URL="postgresql://user:pass@host/db"
+   
+   # Genera secret key
+   heroku config:set SECRET_KEY="$(openssl rand -hex 32)"
+   
+   # Deploy
+   git push heroku main
+   ```
+
+2. **Setup Heroku Scheduler** (gratuito):
+   ```bash
+   heroku addons:create scheduler:standard
+   heroku addons:open scheduler
+   ```
+   
+   Aggiungi questi job:
+   - `python heroku_scheduler.py collect_crypto_data` (ogni 10 min)
+   - `python heroku_scheduler.py cleanup_old_data` (giornaliero)
+   - `python heroku_scheduler.py execute_strategies` (ogni 10 min)
+
+3. **Documentazione Completa:**
+   
+   Consulta [HEROKU_DEPLOYMENT.md](HEROKU_DEPLOYMENT.md) per:
+   - Setup database PostgreSQL gratuito (Neon/Supabase)
+   - Setup Redis gratuito (Upstash)
+   - Configurazione variabili ambiente
+   - Troubleshooting
+   - Tips & tricks
+
+### Sviluppo Locale
+
+```bash
+# Installa Heroku CLI
+brew install heroku/brew/heroku
+
+# Test locale con Procfile
+heroku local web
+```
 
 ## 🤝 Contribuire
 
