@@ -21,3 +21,4 @@ jobs:
 
       - name: Riavvia servizio Python
         run: sudo systemctl restart altar-trader-hub.service
+
