@@ -11,14 +11,67 @@ jobs:
 
     steps:
       - name: Checkout codice
-        uses: actions/checkout@v2
-
-      - name: Installa dipendenze
-        run: pip install -r requirements.txt
+        uses: actions/checkout@v4
 
       - name: Sincronizza codice nella cartella di deploy
-        run: rsync -av --delete . /home/samuelevalente/altar-trader-hub-be
+        run: |
+          echo "📦 Sincronizzazione codice..."
+          rsync -av --delete \
+            --exclude 'venv' \
+            --exclude '__pycache__' \
+            --exclude '*.pyc' \
+            --exclude '.git' \
+            --exclude 'trading_bot.db' \
+            --exclude '.env' \
+            . /home/samuelevalente/altar-trader-hub-be/
 
-      - name: Riavvia servizio Python
-        run: sudo systemctl restart altar-trader-hub.service
+      - name: Installa/Aggiorna dipendenze
+        run: |
+          echo "🔧 Installazione dipendenze..."
+          cd /home/samuelevalente/altar-trader-hub-be
+          
+          # Crea venv se non esiste
+          if [ ! -d "venv" ]; then
+            echo "Creazione ambiente virtuale..."
+            python3 -m venv venv
+          fi
+          
+          # Attiva venv e installa dipendenze
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          echo "✅ Dipendenze installate"
+
+      - name: Esegui migrazioni database
+        run: |
+          echo "🗄️ Esecuzione migrazioni..."
+          cd /home/samuelevalente/altar-trader-hub-be
+          source venv/bin/activate
+          python migrate.py
+          echo "✅ Migrazioni completate"
+
+      - name: Riavvia servizio
+        run: |
+          echo "🔄 Riavvio servizio..."
+          # Tenta prima con systemd
+          if sudo systemctl restart altar-trader-hub.service 2>/dev/null; then
+            echo "✅ Servizio riavviato con systemd"
+          else
+            # Fallback: usa lo script di deployment
+            cd /home/samuelevalente/altar-trader-hub-be
+            bash scripts/restart_service.sh
+            echo "✅ Servizio riavviato con script"
+          fi
+
+      - name: Verifica stato servizio
+        run: |
+          echo "🔍 Verifica stato servizio..."
+          sleep 5
+          if sudo systemctl is-active --quiet altar-trader-hub.service 2>/dev/null; then
+            echo "✅ Servizio attivo e funzionante"
+            sudo systemctl status altar-trader-hub.service --no-pager
+          else
+            echo "⚠️ Verifica manualmente lo stato del servizio"
+          fi
 
